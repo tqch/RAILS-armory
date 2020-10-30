@@ -126,6 +126,29 @@ class RAILSEvalWrapper(PyTorchClassifier):
                     def predict(self, x):
                         return self._model.predict(x)
 
+                    def truncated_forward(self, truncate=None):
+                        assert truncate is not None, "truncate must be specified"
+                        if truncate == 0:
+                            return self._model.partial_forward_1
+                        elif truncate == 1:
+                            return self._model.partial_forward_2
+                        elif truncate == 2:
+                            return self._model.partial_forward_3
+                        else:
+                            return self._model.partial_forward_4
+
+                    def partial_forward_1(self, x):
+                        return self._model.partial_forward_1(x)
+
+                    def partial_forward_2(self, x):
+                        return self._model.partial_forward_2(x)
+
+                    def partial_forward_3(self, x):
+                        return self._model.partial_forward_3(x)
+
+                    def partial_forward_4(self, x):
+                        return self._model.partial_forward_4(x)
+
                     @property
                     def get_layers(self) -> List[str]:
                         """
