@@ -66,7 +66,7 @@ class RAILSEvalWrapper(PyTorchClassifier):
             )
 
             with torch.no_grad():
-                output = self._model.predict(torch.from_numpy(x_preprocessed[begin:end]).to(self._device).permute([0,3,1,2]))
+                output = self._model.predict(torch.from_numpy(x_preprocessed[begin:end]).to(self._device))
             results[begin:end] = output.detach().cpu().numpy()
 
         # Apply postprocessing
