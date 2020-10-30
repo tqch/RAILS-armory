@@ -35,14 +35,7 @@
         "fit_kwargs": {
             "nb_epochs": 20
         },
-        "model_kwargs": {"kwargs_path":"aise_default_config.json"},
-        "module": "rails",
-        "name": "get_art_model",
-        "weights_file": "mnistmodel.pt",
-        "wrapper_kwargs": {}
-    },
-    "scenario": {
-        "kwargs": {
+        "model_kwargs": {
             "aise_params": {
                 "0": {
                     "sampling_temperature": 3
@@ -65,7 +58,14 @@
             ],
             "train_data": "train_less_data.pkl",
             "train_targets": "train_less_targets.pkl"
-        },
+            },
+        "module": "rails",
+        "name": "get_art_model",
+        "weights_file": "mnistmodel.pt",
+        "wrapper_kwargs": {}
+    },
+    "scenario": {
+        "kwargs": {},
         "module": "armory.scenarios.image_classification",
         "name": "ImageClassificationTask"
     },
