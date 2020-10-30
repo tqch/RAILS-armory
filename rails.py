@@ -10,8 +10,8 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class RAILSEvalWrapper(PyTorchClassifier):
-    def __init__(self):
-        super(RAILSEvalWrapper,self).__init__()
+    def __init__(self,**kwargs):
+        super(RAILSEvalWrapper,self).__init__(**kwargs)
 
     def predict(self):
 
