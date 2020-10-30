@@ -1,11 +1,11 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from AISE import AISE
 import pickle,json
 import numpy as np
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 from art.classifiers import PyTorchClassifier
 import copy
