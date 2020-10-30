@@ -379,6 +379,7 @@ class AISE:
             return mem_bcs, mem_labs, pla_bcs, pla_labs
         
     def __call__(self, ant):
+        print(ant.__class__,ant.shape)
         _,_,_,pla_labs,*_ = self.clonal_expansion(ant)
         # output the prediction of aise
         return AISE.predict_proba(pla_labs,self.n_class)
