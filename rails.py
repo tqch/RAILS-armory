@@ -77,7 +77,7 @@ class RAILSEvalWrapper(PyTorchClassifier):
 
 class CNNAISE(nn.Module):
 
-    def __init__(self, train_data, train_targets, hidden_layers, aise_params):
+    def __init__(self, train_data, train_targets, hidden_layers, aise_params, channel_first=True):
         super(CNNAISE, self).__init__()
         self.conv1 = nn.Conv2d(1, 64, 3, padding=1)
         self.conv2 = nn.Conv2d(64, 64, 3, padding=1)
@@ -90,6 +90,7 @@ class CNNAISE(nn.Module):
         self.y_train = torch.LongTensor(train_targets)
         self.hidden_layers = hidden_layers
         self.aise_params = aise_params
+        self.channel_first = channel_first
 
     def truncated_forward(self, truncate=None):
         assert truncate is not None, "truncate must be specified"
@@ -137,11 +138,14 @@ class CNNAISE(nn.Module):
         out_fc1 = F.dropout(F.relu(self.fc1(out_view)), 0.1, training=self.training)
         out_fc2 = F.dropout(F.relu(self.fc2(out_fc1)), 0.1, training=self.training)
         out = self.fc3(out_fc2)
-
         return out
 
+    def __call__(self, x):
+        if not self.channel_first:
+            x = x.permute([0,3,1,2])
+        return self.forward(x)
+
     def predict(self, x):
-        print(x.shape)
         pred_sum = 0.
         for i, layer in enumerate(self.hidden_layers):
             aise = AISE(x_orig=self.x_train, y_orig=self.y_train, hidden_layer=layer, device=DEVICE, model=self, **self.aise_params[str(i)])

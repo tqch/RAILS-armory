@@ -86,7 +86,7 @@ class AISE:
     def __init__(self, x_orig, y_orig, hidden_layer=None, model=None, input_shape=None, device=torch.device("cuda"),
                  n_class=10, n_neighbors=10, query_class="l2", norm_order=2, normalize=False,
                  avg_channel=False, fitness_function="negative l2", sampling_temperature=.3, adaptive_temp=False,
-                 max_generation=1, requires_init=True, apply_bound="none", c=1.0,
+                 max_generation=50, requires_init=True, apply_bound="none", c=1.0,
                  mut_range=(.05, .15), mut_prob=(.05, .15), mut_mode="crossover",
                  decay=(.9, .9), n_population=1000, memory_threshold=.25, plasma_threshold=.05, 
                  keep_memory=False, return_log=True):
