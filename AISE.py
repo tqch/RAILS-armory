@@ -93,8 +93,8 @@ class AISE:
         self.model = model
         self.device = device
 
-        self.x_orig = torch.Tensor(x_orig)
-        self.y_orig = y_orig
+        self.x_orig = torch.FloatTensor(x_orig)
+        self.y_orig = torch.LongTensor(y_orig)
         
         if input_shape is None:
             try:
@@ -139,16 +139,16 @@ class AISE:
         self.keep_memory = keep_memory
         self.return_log = return_log
 
-        # try:
-        self.model.to(self.device)
-        self.model.eval()
-        # except:
-        #     print("Invalid model!")
+        try:
+            self.model.to(self.device)
+            self.model.eval()
+        except:
+            print("Invalid model!")
         
-        # try:
-        self._query_objects = self._build_all_query_objects()
-        # except:
-        #     print("Cannot build query objects!")
+        try:
+            self._query_objects = self._build_all_query_objects()
+        except:
+            print("Cannot build query objects!")
         
     def _get_fitness_func(self,func_str):
         if func_str == "negative l2":
