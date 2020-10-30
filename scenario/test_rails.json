@@ -38,7 +38,7 @@
         "model_kwargs": {"kwargs_path":"aise_default_config.json"},
         "module": "rails",
         "name": "get_art_model",
-        "weights_file": "model_weights/mnistmodel.pt",
+        "weights_file": "mnistmodel.pt",
         "wrapper_kwargs": {}
     },
     "scenario": {
@@ -47,7 +47,7 @@
         "name": "ImageClassificationTask"
     },
     "sysconfig": {
-        "docker_image": "twosixarmory/pytorch:1.6.0",
+        "docker_image": "twosixarmory/pytorch:0.12.1",
         "external_github_repo": "tqch/aise_eval",
         "gpus": "1",
         "output_dir": null,
