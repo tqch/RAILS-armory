@@ -50,8 +50,8 @@ class CNNAISE(nn.Module):
         self.fc1 = nn.Linear(128 * 7 * 7, 256)
         self.fc2 = nn.Linear(256, 256)
         self.fc3 = nn.Linear(256, 10)
-        self.x_train = self._load_data_from_file(train_data)
-        self.y_train = self._load_data_from_file(train_targets)
+        self.x_train = train_data
+        self.y_train = train_targets
         self.hidden_layers = hidden_layers
         self.aise_params = aise_params
 
@@ -118,7 +118,7 @@ def get_art_model(model_kwargs, wrapper_kwargs, weights_path=None):
     model.to(DEVICE)
     model.load_state_dict(checkpoint["state_dict"])
 
-    wrapped_model = PyTorchClassifier(
+    wrapped_model = RAILSEvalWrapper(
         model,
         loss=nn.CrossEntropyLoss(),
         optimizer=torch.optim.Adam(model.parameters(), lr=0.003),
