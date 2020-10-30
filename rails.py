@@ -55,10 +55,6 @@ class CNNAISE(nn.Module):
         self.hidden_layers = hidden_layers
         self.aise_params = aise_params
 
-    def _load_data_from_file(self, file_path):
-        with open(file_path, "rb") as f:
-            return torch.Tensor(pickle.load(f))
-
     def truncated_forward(self, truncate=None):
         assert truncate is not None, "truncate must be specified"
         if truncate == 0:
@@ -116,18 +112,12 @@ class CNNAISE(nn.Module):
         return pred_sum / len(self.hidden_layers)
 
 
-def make_mnist_model(**kwargs):
-    return CNNAISE(**kwargs)
-
-
 def get_art_model(model_kwargs, wrapper_kwargs, weights_path=None):
-
-    model = make_mnist_model(**model_kwargs)
+    assert weights_path is not None
+    checkpoint = torch.load(weights_path, map_location=DEVICE)
+    model = make_mnist_model(checkpoint["train_data"],checkpoint["train_targets"],**model_kwargs)
     model.to(DEVICE)
-
-    if weights_path:
-        checkpoint = torch.load(weights_path, map_location=DEVICE)["state_dict"]
-        model.load_state_dict(checkpoint)
+    model.load_state_dict(checkpoint["state_dict"])
 
     wrapped_model = PyTorchClassifier(
         model,

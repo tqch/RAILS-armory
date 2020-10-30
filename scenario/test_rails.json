@@ -55,9 +55,7 @@
                 1,
                 2,
                 3
-            ],
-            "train_data": "train_less_data.pkl",
-            "train_targets": "train_less_targets.pkl"
+				]
             },
         "module": "rails",
         "name": "get_art_model",
@@ -72,9 +70,9 @@
     "sysconfig": {
         "docker_image": "twosixarmory/pytorch:0.12.1",
         "external_github_repo": "tqch/aise_eval",
-        "gpus": "1",
+        "gpus": "all",
         "output_dir": null,
         "output_filename": null,
-        "use_gpu": true
+        "use_gpu": false
     }
 }
