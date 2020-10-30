@@ -86,8 +86,8 @@ class CNNAISE(nn.Module):
         self.fc1 = nn.Linear(128 * 7 * 7, 256)
         self.fc2 = nn.Linear(256, 256)
         self.fc3 = nn.Linear(256, 10)
-        self.x_train = train_data
-        self.y_train = train_targets
+        self.x_train = torch.Tensor(train_data)
+        self.y_train = torch.LongTensor(train_targets)
         self.hidden_layers = hidden_layers
         self.aise_params = aise_params
 

@@ -93,8 +93,8 @@ class AISE:
         self.model = model
         self.device = device
 
-        self.x_orig = torch.FloatTensor(x_orig)
-        self.y_orig = torch.LongTensor(y_orig)
+        self.x_orig = x_orig
+        self.y_orig = y_orig
         
         if input_shape is None:
             try:
@@ -188,6 +188,7 @@ class AISE:
             rel_ind = [query_obj(Q) for query_obj in self._query_objects]
             abs_ind = []
             for c in range(self.n_class):
+                print(self.y_orig.__class__)
                 class_ind = np.where(self.y_orig.numpy() == c)[0]
                 abs_ind.append(class_ind[rel_ind[c]])
             print("done!")
