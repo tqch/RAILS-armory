@@ -145,7 +145,7 @@ class CNNAISE(nn.Module):
         pred_sum = 0.
         for i, layer in enumerate(self.hidden_layers):
             aise = AISE(x_orig=self.x_train, y_orig=self.y_train, hidden_layer=layer, device=DEVICE, model=self, **self.aise_params[str(i)])
-            pred_sum = pred_sum + aise(x)
+            pred_sum = pred_sum + aise(x,channel_first=False)
         return torch.Tensor(pred_sum / len(self.hidden_layers))
 
     @property
