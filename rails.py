@@ -77,7 +77,7 @@ class RAILSEvalWrapper(PyTorchClassifier):
 
 class CNNAISE(nn.Module):
 
-    def __init__(self, train_data, train_targets, hidden_layers, aise_params, channel_first=True):
+    def __init__(self, train_data, train_targets, hidden_layers, aise_params):
         super(CNNAISE, self).__init__()
         self.conv1 = nn.Conv2d(1, 64, 3, padding=1)
         self.conv2 = nn.Conv2d(64, 64, 3, padding=1)
@@ -90,7 +90,6 @@ class CNNAISE(nn.Module):
         self.y_train = torch.LongTensor(train_targets)
         self.hidden_layers = hidden_layers
         self.aise_params = aise_params
-        self.channel_first = channel_first
 
     def truncated_forward(self, truncate=None):
         assert truncate is not None, "truncate must be specified"
@@ -141,15 +140,19 @@ class CNNAISE(nn.Module):
         return out
 
     def __call__(self, x):
-        if not self.channel_first:
+        # check if channel first
+        if x.size(1) != 1:
             x = x.permute([0,3,1,2])
         return self.forward(x)
 
     def predict(self, x):
+        # check if channel first
+        if x.size(1) != 1:
+            x = x.permute([0,3,1,2])
         pred_sum = 0.
         for i, layer in enumerate(self.hidden_layers):
             aise = AISE(x_orig=self.x_train, y_orig=self.y_train, hidden_layer=layer, device=DEVICE, model=self, **self.aise_params[str(i)])
-            pred_sum = pred_sum + aise(x,channel_first=False)
+            pred_sum = pred_sum + aise(x)
         return torch.Tensor(pred_sum / len(self.hidden_layers))
 
     @property

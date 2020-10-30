@@ -379,9 +379,7 @@ class AISE:
         else:
             return mem_bcs, mem_labs, pla_bcs, pla_labs
         
-    def __call__(self, ant, channel_first=True):
-        if not channel_first:
-            ant = ant.permute([0,3,1,2])
+    def __call__(self, ant):
         _,_,_,pla_labs,*_ = self.clonal_expansion(ant)
         # output the prediction of aise
         return AISE.predict_proba(pla_labs,self.n_class)
