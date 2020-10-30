@@ -6,7 +6,7 @@ from sklearn.preprocessing import normalize
 import numpy as np
 import math,time
 from collections import Counter
-import gc
+
 
 class GenAdapt:
     '''
@@ -380,11 +380,6 @@ class AISE:
         
     def __call__(self, ant):
         _,_,_,pla_labs,*_ = self.clonal_expansion(ant)
-        # delete all the data reference in the object after clonal expansion
-        del self.x_orig
-        del self.y_orig
-        del self._query_objects
-        gc.collect()
         # output the prediction of aise
         return AISE.predict_proba(pla_labs,self.n_class)
         
