@@ -1,4 +1,3 @@
-from art.classifiers import PyTorchClassifier
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -8,6 +7,7 @@ import numpy as np
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+from art.classifiers import PyTorchClassifier
 import copy
 import logging
 import os
