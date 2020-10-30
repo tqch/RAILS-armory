@@ -3,6 +3,8 @@
   <component name="ChangeListManager">
     <list default="true" id="452e797d-81a3-46af-9245-7509b335ad01" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model_weights/train_less_data.pkl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/model_weights/train_less_targets.pkl" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/rails.py" beforeDir="false" afterPath="$PROJECT_DIR$/rails.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/scenario/test_rails.json" beforeDir="false" afterPath="$PROJECT_DIR$/scenario/test_rails.json" afterDir="false" />
     </list>

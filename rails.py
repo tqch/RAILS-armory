@@ -122,7 +122,7 @@ def make_mnist_model(**kwargs):
 
 def get_art_model(model_kwargs, wrapper_kwargs, weights_path=None):
 
-    with open(model_kwargs["kwargs_path"],"r") as f:
+    with open(model_kwargs,"r") as f:
         model_kwargs = json.load(f)
     model = make_mnist_model(**model_kwargs)
     model.to(DEVICE)
