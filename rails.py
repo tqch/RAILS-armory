@@ -235,7 +235,7 @@ class CNNAISE(nn.Module):
     def predict(self, x):
         pred_sum = 0.
         for i, layer in enumerate(self.hidden_layers):
-            aise = AISE(self.x_train, self.y_train, hidden_layer=layer, model=self, **self.aise_params[str(i)])
+            aise = AISE(self.x_train, self.y_train, hidden_layer=layer, device=DEVICE, model=self, **self.aise_params[str(i)])
             pred_sum = pred_sum + aise(x)
         return pred_sum / len(self.hidden_layers)
 
