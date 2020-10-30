@@ -5,7 +5,38 @@ import torch.nn.functional as F
 from AISE import AISE
 import pickle,json
 import numpy as np
+
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+import copy
+import logging
+import os
+import random
+import time
 from typing import Any, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
+
+import numpy as np
+import six
+
+from art.config import ART_DATA_PATH
+from art.estimators.classification.classifier import (
+    ClassGradientsMixin,
+    ClassifierMixin,
+)
+from art.estimators.pytorch import PyTorchEstimator
+from art.utils import Deprecated, deprecated_keyword_arg, check_and_transform_label_format
+
+if TYPE_CHECKING:
+    # pylint: disable=C0412
+    import torch
+
+    from art.utils import CLIP_VALUES_TYPE, PREPROCESSING_TYPE
+    from art.data_generators import DataGenerator
+    from art.defences.preprocessor import Preprocessor
+    from art.defences.postprocessor import Postprocessor
+
+logger = logging.getLogger(__name__)
+
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
