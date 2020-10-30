@@ -13,7 +13,7 @@ class RAILSEvalWrapper(PyTorchClassifier):
     def __init__(self,**kwargs):
         super(RAILSEvalWrapper,self).__init__(**kwargs)
 
-    def predict(self):
+    def predict(self, x, batch_size=128, **kwargs):
 
         self._model.eval()
 
