@@ -45,6 +45,9 @@ class RAILSEvalWrapper(PyTorchClassifier):
     def __init__(self,**kwargs):
         super(RAILSEvalWrapper,self).__init__(**kwargs)
 
+    def _make_model_wrapper(self, model):
+        return model
+
     def predict(self, x, batch_size=128, **kwargs):
 
         self._model.eval()
@@ -71,127 +74,9 @@ class RAILSEvalWrapper(PyTorchClassifier):
 
         return predictions
 
-    def _make_model_wrapper(self, model: "torch.nn.Module"):
-        # Try to import PyTorch and create an internal class that acts like a model wrapper extending torch.nn.Module
-        try:
-            import torch.nn as nn
-
-            # Define model wrapping class only if not defined before
-            if not hasattr(self, "_model_wrapper"):
-
-                class ModelWrapper(nn.Module):
-                    """
-                    This is a wrapper for the input model.
-                    """
-
-                    import torch  # lgtm [py/repeated-import]
-
-                    def __init__(self, model: torch.nn.Module):
-                        """
-                        Initialization by storing the input model.
-                        :param model: PyTorch model. The forward function of the model must return the logit output.
-                        """
-                        super().__init__()
-                        self._model = model
-
-                    # pylint: disable=W0221
-                    # disable pylint because of API requirements for function
-                    def forward(self, x):
-                        """
-                        This is where we get outputs from the input model.
-                        :param x: Input data.
-                        :type x: `torch.Tensor`
-                        :return: a list of output layers, where the last 2 layers are logit and final outputs.
-                        :rtype: `list`
-                        """
-                        # pylint: disable=W0212
-                        # disable pylint because access to _model required
-                        import torch.nn as nn
-
-                        result = []
-                        if isinstance(self._model, nn.Sequential):
-                            for _, module_ in self._model._modules.items():
-                                x = module_(x)
-                                result.append(x)
-
-                        elif isinstance(self._model, nn.Module):
-                            x = self._model(x)
-                            result.append(x)
-
-                        else:
-                            raise TypeError("The input model must inherit from `nn.Module`.")
-
-                        return result
-
-                    def predict(self, x):
-                        return self._model.predict(x)
-
-                    def truncated_forward(self, truncate=None):
-                        assert truncate is not None, "truncate must be specified"
-                        if truncate == 0:
-                            return self._model.partial_forward_1
-                        elif truncate == 1:
-                            return self._model.partial_forward_2
-                        elif truncate == 2:
-                            return self._model.partial_forward_3
-                        else:
-                            return self._model.partial_forward_4
-
-                    def partial_forward_1(self, x):
-                        return self._model.partial_forward_1(x)
-
-                    def partial_forward_2(self, x):
-                        return self._model.partial_forward_2(x)
-
-                    def partial_forward_3(self, x):
-                        return self._model.partial_forward_3(x)
-
-                    def partial_forward_4(self, x):
-                        return self._model.partial_forward_4(x)
-
-                    @property
-                    def get_layers(self) -> List[str]:
-                        """
-                        Return the hidden layers in the model, if applicable.
-                        :return: The hidden layers in the model, input and output layers excluded.
-                        .. warning:: `get_layers` tries to infer the internal structure of the model.
-                                     This feature comes with no guarantees on the correctness of the result.
-                                     The intended order of the layers tries to match their order in the model, but this
-                                     is not guaranteed either. In addition, the function can only infer the internal
-                                     layers if the input model is of type `nn.Sequential`, otherwise, it will only
-                                     return the logit layer.
-                        """
-                        import torch.nn as nn
-
-                        result = []
-                        if isinstance(self._model, nn.Sequential):
-                            # pylint: disable=W0212
-                            # disable pylint because access to _modules required
-                            for name, module_ in self._model._modules.items():  # type: ignore
-                                result.append(name + "_" + str(module_))
-
-                        elif isinstance(self._model, nn.Module):
-                            result.append("final_layer")
-
-                        else:
-                            raise TypeError("The input model must inherit from `nn.Module`.")
-                        logger.info(
-                            "Inferred %i hidden layers on PyTorch classifier.", len(result),
-                        )
-
-                        return result
-
-                # Set newly created class as private attribute
-                self._model_wrapper = ModelWrapper
-
-            # Use model wrapping class to wrap the PyTorch model received as argument
-            return self._model_wrapper(model)
-
-        except ImportError:
-            raise ImportError("Could not find PyTorch (`torch`) installation.") from ImportError
-
 
 class CNNAISE(nn.Module):
+
     def __init__(self, train_data, train_targets, hidden_layers, aise_params):
         super(CNNAISE, self).__init__()
         self.conv1 = nn.Conv2d(1, 64, 3, padding=1)
@@ -262,6 +147,37 @@ class CNNAISE(nn.Module):
             pred_sum = pred_sum + aise(x)
         return pred_sum / len(self.hidden_layers)
 
+    @property
+    def get_layers(self) -> List[str]:
+        """
+        Return the hidden layers in the model, if applicable.
+        :return: The hidden layers in the model, input and output layers excluded.
+        .. warning:: `get_layers` tries to infer the internal structure of the model.
+                     This feature comes with no guarantees on the correctness of the result.
+                     The intended order of the layers tries to match their order in the model, but this
+                     is not guaranteed either. In addition, the function can only infer the internal
+                     layers if the input model is of type `nn.Sequential`, otherwise, it will only
+                     return the logit layer.
+        """
+        import torch.nn as nn
+
+        result = []
+        if isinstance(self._model, nn.Sequential):
+            # pylint: disable=W0212
+            # disable pylint because access to _modules required
+            for name, module_ in self._model._modules.items():  # type: ignore
+                result.append(name + "_" + str(module_))
+
+        elif isinstance(self._model, nn.Module):
+            result.append("final_layer")
+
+        else:
+            raise TypeError("The input model must inherit from `nn.Module`.")
+        logger.info(
+            "Inferred %i hidden layers on PyTorch classifier.", len(result),
+        )
+
+        return result
 
 def make_mnist_model(**kwargs):
     return CNNAISE(**kwargs)
