@@ -14,7 +14,7 @@ class RAILSEvalWrapper(PyTorchClassifier):
         super(RAILSEvalWrapper,self).__init__(**kwargs)
         self._model = self._make_model_wrapper(model)
         # Get the internal layers
-        self._layer_names = self._model.get_layers
+        self._layer_names = self._model.get_layers()
 
         self._model.to(self._device)
 
