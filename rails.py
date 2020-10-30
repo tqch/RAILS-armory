@@ -124,7 +124,7 @@ def get_art_model(model_kwargs, wrapper_kwargs, weights_path=None):
     model.load_state_dict(checkpoint["state_dict"])
 
     wrapped_model = RAILSEvalWrapper(
-        model,
+        model=model,
         loss=nn.CrossEntropyLoss(),
         optimizer=torch.optim.Adam(model.parameters(), lr=0.003),
         input_shape=(1, 28, 28),
