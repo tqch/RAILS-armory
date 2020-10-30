@@ -6,6 +6,7 @@ from sklearn.preprocessing import normalize
 import numpy as np
 import math,time
 from collections import Counter
+from copy import deepcopy
 
 
 class GenAdapt:
@@ -93,8 +94,8 @@ class AISE:
         self.model = model
         self.device = device
 
-        self.x_orig = x_orig
-        self.y_orig = y_orig
+        self.x_orig = deepcopy(x_orig)
+        self.y_orig = deepcopy(y_orig)
         
         if input_shape is None:
             try:
