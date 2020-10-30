@@ -139,7 +139,7 @@ class CNNAISE(nn.Module):
         out_fc1 = F.dropout(F.relu(self.fc1(out_view)), 0.1, training=self.training)
         out_fc2 = F.dropout(F.relu(self.fc2(out_fc1)), 0.1, training=self.training)
         out = self.fc3(out_fc2)
-        return out
+        return [out,]
 
     def predict(self, x):
         # check if channel first
