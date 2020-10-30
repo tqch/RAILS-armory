@@ -386,7 +386,7 @@ class AISE:
         del self._query_objects
         gc.collect()
         # output the prediction of aise
-        return AISE.predict(pla_labs,self.n_class)
+        return AISE.predict_proba(pla_labs,self.n_class)
         
     @staticmethod
     def predict(labs,n_class):
@@ -394,4 +394,4 @@ class AISE:
 
     @staticmethod
     def predict_proba(labs,n_class):
-        return np.stack(list(map(lambda x: np.bincount(x,minlength=n_class)/n_class, labs)))
+        return np.stack(list(map(lambda x: np.bincount(x,minlength=n_class)/x.shape[1], labs)))

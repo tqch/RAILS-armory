@@ -10,7 +10,7 @@ import torch.nn.functional as F
 from AISE import AISE
 import pickle
 import numpy as np
-from collections import Counter
+# from collections import Counter
 
 
 class CNNAISE(nn.Module):
@@ -82,9 +82,8 @@ class CNNAISE(nn.Module):
         return out
     
     def predict(self, x):
-        preds = []
+        pred_sum = 0.
         for i,layer in enumerate(self.hidden_layers):
             aise = AISE(self.x_train,self.y_train,hidden_layer=layer,model=self,**self.aise_params[str(i)])
-            preds.append(aise(x))
-        preds_cat = list(zip(*preds))
-        return np.array(list(map(lambda x: Counter(x).most_common(1)[0][0],preds_cat)))
+            pred_sum = pred_sum + aise(x)
+        return pred_sum/len(self.hidden_layers)
