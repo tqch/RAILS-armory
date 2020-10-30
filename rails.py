@@ -111,13 +111,10 @@ class CNNAISE(nn.Module):
             pred_sum = pred_sum + aise(x)
         return pred_sum / len(self.hidden_layers)
 
-def make_mnist_model(**kwargs):
-    return CNNAISE(**kwargs)
-
 def get_art_model(model_kwargs, wrapper_kwargs, weights_path=None):
     assert weights_path is not None
     checkpoint = torch.load(weights_path, map_location=DEVICE)
-    model = make_mnist_model(train_data=checkpoint["train_data"],train_targets=checkpoint["train_targets"],**model_kwargs)
+    model = CNNAISE(train_data=checkpoint["train_data"],train_targets=checkpoint["train_targets"],**model_kwargs)
     model.to(DEVICE)
     model.load_state_dict(checkpoint["state_dict"])
 
