@@ -60,7 +60,7 @@
         "module": "rails",
         "name": "get_art_model",
         "weights_file": "mnist_rails_test.pt",
-        "wrapper_kwargs": {}
+        "wrapper_kwargs": {"channels_first": true}
     },
     "scenario": {
         "kwargs": {},
