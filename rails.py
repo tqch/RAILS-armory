@@ -162,13 +162,13 @@ class CNNAISE(nn.Module):
         import torch.nn as nn
 
         result = []
-        if isinstance(self._model, nn.Sequential):
+        if isinstance(self, nn.Sequential):
             # pylint: disable=W0212
             # disable pylint because access to _modules required
-            for name, module_ in self._model._modules.items():  # type: ignore
+            for name, module_ in self._modules.items():  # type: ignore
                 result.append(name + "_" + str(module_))
 
-        elif isinstance(self._model, nn.Module):
+        elif isinstance(self, nn.Module):
             result.append("final_layer")
 
         else:
