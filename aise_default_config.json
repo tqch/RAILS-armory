@@ -19,6 +19,6 @@
         2,
         3
     ],
-    "train_data": "model_weights/train_data.pkl",
-    "train_targets": "model_weights/train_targets.pkl"
+    "train_data": "model_weights/train_less_data.pkl",
+    "train_targets": "model_weights/train_less_targets.pkl"
 }

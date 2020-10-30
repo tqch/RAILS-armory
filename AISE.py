@@ -353,10 +353,10 @@ class AISE:
             ant_logs.append(ant_log)        
         
         pla_bcs = torch.stack(pla_bcs).view((-1,self.n_plasma)+self.input_shape).numpy()
-        pla_labs = np.stack(pla_labs)
+        pla_labs = np.stack(pla_labs).astype(np.int)
         if self.keep_memory:
             mem_bcs = torch.stack(mem_bcs).view((-1,self.n_mem)+self.input_shape).numpy()
-            mem_labs = np.stack(mem_labs)
+            mem_labs = np.stack(mem_labs).astype(np.int)
         
         return mem_bcs, mem_labs, pla_bcs, pla_labs, ant_logs
 
@@ -368,7 +368,7 @@ class AISE:
         except:
             print("The object needs to be re-instaniated after one call!")
         mem_bcs, mem_labs, pla_bcs, pla_labs, ant_logs = self.generate_b_cells(ant.flatten(start_dim=1), ant_tran,
-                                                                               nbc_ind, np.array(y_ant))
+                                                                               nbc_ind)
         if self.keep_memory:
             print("{} plasma B cells and {} memory generated!".format(pla_bcs.shape[0]*self.n_plasma, mem_bcs.shape[0]*self.n_memory))
         else:
@@ -389,230 +389,9 @@ class AISE:
         return AISE.predict(pla_labs,self.n_class)
         
     @staticmethod
-    def predict(labs):
-        return AISE.predict_proba(labs).argmax(axis=1)
+    def predict(labs,n_class):
+        return AISE.predict_proba(labs,n_class).argmax(axis=1)
 
     @staticmethod
     def predict_proba(labs,n_class):
-        return np.stack(list(map(lambda x: np.bincount(x,minlength=n_class)/len(x), labs)))
-
-if __name__ == "__main__":
-    import os,time,pickle
-    from datetime import datetime
-    from torchvision import transforms, datasets
-    from attack import *
-    from mnist_model import *
-    from sklearn.neighbors import KNeighborsClassifier
-    from collections import deque
-
-    import argparse
-    parser = argparse.ArgumentParser("AISE Launcher")
-    parser.add_argument("--class-num",help="Number of classes",type=int,default=10)
-    parser.add_argument("--train-size",help="Training size",type=int,default=20000)
-    parser.add_argument("--eval-size",help="Evaluation size",type=int,default=200)
-    parser.add_argument("--n-neighbors",help="Number of ancestors for each class",type=int,default=10)
-    parser.add_argument("--max-generation",help="Max number of generations",type=int,default=50)
-    parser.add_argument("--hidden-layer",help="Specify a hidden layer",type=int)
-    parser.add_argument("--fitness-function",help="Specify a function used to calculate fitness score",default="negative l2")
-    parser.add_argument("--sampling-temp",help="Sampling temperature",type=float,default=0.3)
-    parser.add_argument("--apply-bound",help="Whether to clip according to hard/soft class bound",default="none")
-    parser.add_argument("--avg-channel",help="Whether to average the channels or not",action="store_true")
-    parser.add_argument("--device", help="CPU/GPU device")
-    parser.add_argument("--no-knn", help="Whether to skip knn or not",action="store_true")
-    parser.add_argument("--attack-intensity", help="The radius of lp ball constraint on attacks (0-255)",type=int,default=40)
-    parser.add_argument("-c","--use-cache",help="Whether cache is used",action="store_true")
-    parser.add_argument("-s","--save-result",help="Whether to save the result or not",action="store_true")
-    parser.add_argument("-n","--normalize",help="Whether to normalize the flattened vector or not",action="store_true")
-    parser.add_argument("-a","--attack",help="Whether to use PGD attacks",action="store_true")
-    parser.add_argument("-t","--adaptive-temp",help="Whether to use heuristic sampling temperature or not",action="store_true")
-    parser.add_argument("-k","--keep-memory",help="Whether to keep memory data or not",action="store_true")
-    
-    
-    args = parser.parse_args()
-
-    ROOT = "./datasets"
-    TRANSFORM = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(mean=(0.0,),std=(1.0,))
-    ])
-
-    N_CLASS = args.class_num
-    N_TRAIN = args.train_size
-    N_EVAL = args.eval_size
-    N_NEIGH = args.n_neighbors
-    MAX_GEN = args.max_generation
-    APPLY_BOUND = args.apply_bound
-    ADAPTIVE_TEMP = args.adaptive_temp
-    HIDDEN_LAYER = args.hidden_layer
-    FITNESS_FUNC = args.fitness_function
-    SAMPL_TEMP = args.sampling_temp
-    AVG_CHANNEL = args.avg_channel
-    if args.device:
-        DEVICE = torch.device(args.device)
-    else:
-        DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    USE_CACHE = args.use_cache
-    SAVE_RESULT = args.save_result
-    ATTACK = args.attack
-    NORMALIZE = args.normalize
-    KEEP_MEMORY = args.keep_memory
-    NO_KNN = args.no_knn
-    EPS = args.attack_intensity
-    
-    LAYER_NAME = "conv" + str(HIDDEN_LAYER + 1) if HIDDEN_LAYER is not None else "input"
-    DATA_TYPE = "adversarial" if ATTACK else "legitimate"
-    DATA_TYPE_SHORT = "adv" if ATTACK else "clean"
-
-    net = CNN()
-    net.load_state_dict(torch.load("./models/mnistmodel.pt",map_location=DEVICE)["state_dict"])
-    net.eval()
-    for parameter in net.parameters():
-        parameter.requires_grad_(False)
-
-    trainset = datasets.MNIST(root=ROOT,train=True,transform=TRANSFORM,download=False)
-    testset = datasets.MNIST(root=ROOT,train=False,transform=TRANSFORM,download=False)
-
-    np.random.seed(1234)
-    ind_train = np.arange(len(trainset))
-    np.random.shuffle(ind_train)
-    ind_train = ind_train[:N_TRAIN]
-
-    ind_eval = np.arange(len(testset))
-    np.random.shuffle(ind_eval)
-    ind_eval = ind_eval[:N_EVAL]
-
-    x_train = trainset.data[ind_train].unsqueeze(1)/255.
-    y_train = trainset.targets[ind_train]
-    x_eval = testset.data[ind_eval].unsqueeze(1)/255.
-    y_eval = testset.targets[ind_eval]
-    
-    net.to(DEVICE)
-    if ATTACK:
-        if USE_CACHE:
-            if os.path.exists("./cache/x_mnist_{}_{}_{}.pkl".format(DATA_TYPE_SHORT,N_EVAL,EPS)):
-                with open("./cache/x_mnist_{}_{}_{}.pkl".format(DATA_TYPE_SHORT,N_EVAL,EPS),"rb") as f:
-                    x_adv = torch.Tensor(pickle.load(f))
-            else:
-                x_adv = PGD(eps=EPS/255.,sigma=20/255.,nb_iter=20,
-                            DEVICE=DEVICE).attack_batch(net,x_eval.to(DEVICE),y_eval.to(DEVICE))
-                with open("./cache/x_mnist_{}_{}_{}.pkl".format(DATA_TYPE_SHORT,N_EVAL,EPS), "wb") as f:
-                    pickle.dump(x_adv.detach().cpu().numpy(), f)
-        else:
-            x_adv = PGD(eps=EPS/255., sigma=20 / 255., nb_iter=20,
-                        DEVICE=DEVICE).attack_batch(net, x_eval.to(DEVICE), y_eval.to(DEVICE))
-        x_ant = x_adv
-    else:
-        x_ant = x_eval
-    
-    def feature_extractor(net,x,hidden_layer=-1,batch_size=2048,device=DEVICE):
-        if hidden_layer == -1:  # return the last output of net
-            outs = []
-            for i in range(0,x.size(0),batch_size):
-                xx = x[i:i+batch_size]
-                *_, out = net(xx.to(device))
-                outs.append(out.detach().cpu())
-            return torch.cat(outs,dim=0)
-        else:
-            out_hiddens = []
-            for i in range(0,x.size(0),batch_size):
-                xx = x[i:i+batch_size]
-                *out_hidden,_ = [h.detach().cpu() for h in net(xx.to(device))]
-                out_hiddens.append(out_hidden[hidden_layer])
-            return torch.cat(out_hiddens,dim=0)
-
-    out = feature_extractor(net,x_ant)
-    y_pred = torch.max(out, 1)[1]
-
-    if ATTACK:
-        print('The accuracy of plain cnn under PGD attacks is: {}'.format(
-            (y_eval.numpy() == y_pred.detach().cpu().numpy()).astype("float").mean()))
-    else:
-        print("The accuracy of plain cnn on clean data is: {}".format(
-            (y_eval.numpy() == y_pred.detach().cpu().numpy()).astype("float").mean()))
-
-    start_time = time.time()
-    aise = AISE(x_train,y_train,model=net,n_neighbors=N_NEIGH,hidden_layer=HIDDEN_LAYER,max_generation=MAX_GEN,normalize=NORMALIZE,
-                avg_channel=AVG_CHANNEL,fitness_function=FITNESS_FUNC,sampling_temperature=SAMPL_TEMP,adaptive_temp=ADAPTIVE_TEMP,
-                apply_bound=APPLY_BOUND,keep_memory=KEEP_MEMORY)
-    mem_bcs, mem_labs, pla_bcs, pla_labs, ant_logs = aise(x_ant,y_eval)
-    end_time = time.time()
-    print("Total running time is {}".format(end_time-start_time))
-    aise_proba = AISE.predict_proba(pla_labs,n_class=N_CLASS)
-    aise_pred = aise_proba.argmax(axis=1)
-    aise_acc = (aise_pred==y_eval.numpy()).astype("float").mean()
-    print("The accuracy by AISE on {} layer of {} examples is {}".format(LAYER_NAME,DATA_TYPE,aise_acc))
-
-#     def feature_extractor(net,x,hidden_layer,batch_size=2048,device=DEVICE):
-#         if x.size(0)<batch_size:
-#             return net.truncated_forward(x.to(device),hidden_layer).detach().cpu()
-#         out_hiddens = []
-#         for i in range(0,x.size(0),batch_size):
-#             xx = x[i:i+batch_size]
-#             out_hidden = net.truncated_forward(xx.to(device),hidden_layer).detach().cpu()
-#             out_hiddens.append(out_hidden)
-#         return torch.cat(out_hiddens,dim=0)
-    
-    
-    if NO_KNN:
-        knn_proba = None
-    elif USE_CACHE:
-        if os.path.exists("cache/knn_proba_{}_{}_{}_{}{}{}.pkl".format(N_TRAIN,N_EVAL,LAYER_NAME,DATA_TYPE_SHORT,
-                                                                         "_"+str(EPS) if ATTACK else "","_n" if NORMALIZE else "")):
-            with open("cache/knn_proba_{}_{}_{}_{}_{}{}{}.pkl".format(N_TRAIN,N_EVAL,LAYER_NAME,DATA_TYPE_SHORT,
-                                                             "_"+str(EPS) if ATTACK else "","_n" if NORMALIZE else ""),"rb") as f:
-                knn_proba = pickle.load(f)
-        else:
-            net.to(DEVICE)
-            if HIDDEN_LAYER is not None:
-                train_conv = feature_extractor(net,x_train,HIDDEN_LAYER)
-                ant_conv = feature_extractor(net,x_ant,HIDDEN_LAYER)
-
-            if NORMALIZE:
-                x_train.div_(x_train.pow(2).sum(dim=(1,2,3),keepdim=True).sqrt())
-                x_ant.div_(x_ant.pow(2).sum(dim=(1,2,3),keepdim=True).sqrt())
-                if HIDDEN_LAYER is not None:
-                    train_conv = train_conv/train_conv.pow(2).sum(dim=(1,2,3),keepdim=True).sqrt()
-                    ant_conv = ant_conv/ant_conv.pow(2).sum(dim=(1,2,3),keepdim=True).sqrt()
-
-            knn = KNeighborsClassifier(n_neighbors=5,n_jobs=-1)
-            knn.fit(train_conv.flatten(start_dim=1).numpy()
-                    if HIDDEN_LAYER is not None else x_train.flatten(start_dim=1).numpy(), y_train.numpy())
-            knn_proba = knn.predict_proba(ant_conv.flatten(start_dim=1).numpy() 
-                                   if HIDDEN_LAYER is not None else x_ant.flatten(start_dim=1).detach().cpu().numpy())
-            with open("cache/knn_proba_{}_{}_{}_{}{}.pkl".format(N_TRAIN,N_EVAL,LAYER_NAME,DATA_TYPE_SHORT,
-                                                     "_"+str(EPS) if ATTACK else "","_n" if NORMALIZE else ""),"wb") as f:
-                pickle.dump(knn_proba,f)
-    else:  
-        net.to(DEVICE)
-        if HIDDEN_LAYER is not None:
-            train_conv = feature_extractor(net,x_train,HIDDEN_LAYER)
-            ant_conv = feature_extractor(net,x_ant,HIDDEN_LAYER)
-
-        if NORMALIZE:
-            x_train.div_(x_train.pow(2).sum(dim=(1,2,3),keepdim=True).sqrt())
-            x_ant.div_(x_ant.pow(2).sum(dim=(1,2,3),keepdim=True).sqrt())
-            if HIDDEN_LAYER is not None:
-                train_conv = train_conv/train_conv.pow(2).sum(dim=(1,2,3),keepdim=True).sqrt()
-                ant_conv = ant_conv/ant_conv.pow(2).sum(dim=(1,2,3),keepdim=True).sqrt()
-        knn = KNeighborsClassifier(n_neighbors=5,n_jobs=-1)
-        knn.fit(train_conv.flatten(start_dim=1).numpy()
-                if HIDDEN_LAYER is not None else x_train.flatten(start_dim=1).numpy(), y_train.numpy())
-        knn_proba = knn.predict_proba(ant_conv.flatten(start_dim=1).numpy() 
-                               if HIDDEN_LAYER is not None else x_ant.flatten(start_dim=1).detach().cpu().numpy())
-        
-    knn_pred = knn_proba.argmax(axis=1)
-    knn_acc = (knn_pred == y_eval.numpy()).astype("float").mean()
-    print("The accuracy by KNN on {} layer of {} examples is {}".format(LAYER_NAME,DATA_TYPE,knn_acc))
-    
-    if SAVE_RESULT:
-        timestamp = datetime.fromtimestamp(time.time()).strftime("%Y%m%d%H%M%S")
-        if not os.path.exists("./results"):
-            os.mkdir("./results")
-        with open("results/result_mnist_{}_{}_{}_{}_{}.pkl".format(DATA_TYPE_SHORT,LAYER_NAME,N_TRAIN,N_EVAL,timestamp),"wb") as f:
-            pickle.dump([aise_proba,knn_proba,ant_logs],f)
-        with open("results/bcells_mnist_{}_{}_{}_{}_{}.pkl".format(DATA_TYPE_SHORT, LAYER_NAME,N_TRAIN,N_EVAL,timestamp), "wb") as f:
-            pickle.dump([mem_bcs,mem_labs],f)
-            
-#     print("The result is:")
-#     print("AISE:",aise_pred,"KNN",knn_pred)
-    print(args)
+        return np.stack(list(map(lambda x: np.bincount(x,minlength=n_class)/n_class, labs)))

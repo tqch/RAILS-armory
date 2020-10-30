@@ -9,6 +9,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from AISE import AISE
 import pickle
+import numpy as np
+from collections import Counter
 
 
 class CNNAISE(nn.Module):
@@ -28,7 +30,7 @@ class CNNAISE(nn.Module):
         
     def _load_data_from_file(self,file_path):
         with open(file_path,"rb") as f:
-            return pickle.load(f)
+            return torch.Tensor(pickle.load(f))
        
     def truncated_forward(self,truncate=None):
         assert truncate is not None,"truncate must be specified"
