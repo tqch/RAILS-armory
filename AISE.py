@@ -93,7 +93,7 @@ class AISE:
         self.model = model
         self.device = device
 
-        self.x_orig = x_orig
+        self.x_orig = torch.Tensor(x_orig)
         self.y_orig = y_orig
         
         if input_shape is None:
@@ -379,7 +379,6 @@ class AISE:
             return mem_bcs, mem_labs, pla_bcs, pla_labs
         
     def __call__(self, ant):
-        print(ant.__class__,ant.shape)
         _,_,_,pla_labs,*_ = self.clonal_expansion(ant)
         # output the prediction of aise
         return AISE.predict_proba(pla_labs,self.n_class)
