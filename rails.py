@@ -179,6 +179,7 @@ class CNNAISE(nn.Module):
 
         return result
 
+
 def make_mnist_model(**kwargs):
     return CNNAISE(**kwargs)
 

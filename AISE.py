@@ -363,10 +363,10 @@ class AISE:
     def clonal_expansion(self, ant, y_ant=None):
         print("Clonal expansion starts...")
         ant_tran = self._hidden_repr_mapping(ant.detach())
-        try:
-            nbc_ind = self._query_nns_ind(ant_tran.detach().cpu().numpy())
-        except:
-            print("The object needs to be re-instaniated after one call!")
+        # try:
+        nbc_ind = self._query_nns_ind(ant_tran.detach().cpu().numpy())
+        # except:
+        #     print("The object needs to be re-instaniated after one call!")
         mem_bcs, mem_labs, pla_bcs, pla_labs, ant_logs = self.generate_b_cells(ant.flatten(start_dim=1), ant_tran,
                                                                                nbc_ind)
         if self.keep_memory:
