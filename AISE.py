@@ -189,7 +189,6 @@ class AISE:
             rel_ind = [query_obj(Q) for query_obj in self._query_objects]
             abs_ind = []
             for c in range(self.n_class):
-                print(self.y_orig.__class__)
                 class_ind = np.where(self.y_orig.numpy() == c)[0]
                 abs_ind.append(class_ind[rel_ind[c]])
             print("done!")
@@ -365,10 +364,10 @@ class AISE:
     def clonal_expansion(self, ant, y_ant=None):
         print("Clonal expansion starts...")
         ant_tran = self._hidden_repr_mapping(ant.detach())
-        # try:
-        nbc_ind = self._query_nns_ind(ant_tran.detach().cpu().numpy())
-        # except:
-        #     print("The object needs to be re-instaniated after one call!")
+        try:
+            nbc_ind = self._query_nns_ind(ant_tran.detach().cpu().numpy())
+        except:
+            print("The object needs to be re-instaniated after one call!")
         mem_bcs, mem_labs, pla_bcs, pla_labs, ant_logs = self.generate_b_cells(ant.flatten(start_dim=1), ant_tran,
                                                                                nbc_ind)
         if self.keep_memory:
