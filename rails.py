@@ -12,6 +12,11 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class RAILSEvalWrapper(PyTorchClassifier):
     def __init__(self,**kwargs):
         super(RAILSEvalWrapper,self).__init__(**kwargs)
+        self._model = self._make_model_wrapper(model)
+        # Get the internal layers
+        self._layer_names = self._model.get_layers
+
+        self._model.to(self._device)
 
     def predict(self, x, batch_size=128, **kwargs):
 
