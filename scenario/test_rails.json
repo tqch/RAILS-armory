@@ -47,9 +47,9 @@
         "name": "ImageClassificationTask"
     },
     "sysconfig": {
-        "docker_image": "twosixarmory/tf1:0.12.1",
+        "docker_image": "twosixarmory/pytorch:1.6.0",
         "external_github_repo": "tqch/aise_eval",
-        "gpus": "all",
+        "gpus": "1",
         "output_dir": null,
         "output_filename": null,
         "use_gpu": true
