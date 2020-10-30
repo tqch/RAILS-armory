@@ -114,7 +114,8 @@ class CNNAISE(nn.Module):
 def get_art_model(model_kwargs, wrapper_kwargs, weights_path=None):
     assert weights_path is not None
     checkpoint = torch.load(weights_path, map_location=DEVICE)
-    model = CNNAISE(train_data=checkpoint["train_data"],train_targets=checkpoint["train_targets"],**model_kwargs)
+    model = CNNAISE(train_data=checkpoint["train_data"],
+                    train_targets=checkpoint["train_targets"])#,**model_kwargs)
     model.to(DEVICE)
     model.load_state_dict(checkpoint["state_dict"])
 
