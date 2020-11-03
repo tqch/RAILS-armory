@@ -67,7 +67,7 @@ class RAILSEvalWrapper(PyTorchClassifier):
 
             with torch.no_grad():
                 output = self._model.predict(torch.from_numpy(x_preprocessed[begin:end]).to(self._device))
-            results[begin:end] = output.detach().cpu().numpy()
+            results[begin:end] = output
 
         # Apply postprocessing
         predictions = self._apply_postprocessing(preds=results, fit=False)
