@@ -27,6 +27,10 @@ class CNNAISE(nn.Module):
         self.y_train = self._load_data_from_file(train_targets)
         self.hidden_layers = hidden_layers
         self.aise_params = aise_params
+
+        self.aise = []
+        for i,layer in enumerate(self.hidden_layers):
+            self.aise.append(AISE(self.x_train, self.y_train, hidden_layer=layer, model=self, **self.aise_params[str(i)]))
         
     def _load_data_from_file(self,file_path):
         with open(file_path,"rb") as f:
@@ -83,7 +87,6 @@ class CNNAISE(nn.Module):
     
     def predict(self, x):
         pred_sum = 0.
-        for i,layer in enumerate(self.hidden_layers):
-            aise = AISE(self.x_train,self.y_train,hidden_layer=layer,model=self,**self.aise_params[str(i)])
-            pred_sum = pred_sum + aise(x)
+        for i in range(len(self.hidden_layers)):
+            pred_sum = pred_sum + self.aise[i](x)
         return pred_sum/len(self.hidden_layers)
