@@ -8,6 +8,7 @@ import math,time
 from collections import Counter
 from copy import deepcopy
 
+DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 class GenAdapt:
     '''
@@ -83,7 +84,7 @@ class AISE:
     implement the Adaptive Immune System Emulation
     '''
 
-    def __init__(self, x_orig, y_orig, hidden_layer=None, model=None, input_shape=None, device=torch.device("cuda"),
+    def __init__(self, x_orig, y_orig, hidden_layer=None, model=None, input_shape=None, device=DEVICE,
                  n_class=10, n_neighbors=10, query_class="l2", norm_order=2, normalize=False,
                  avg_channel=False, fitness_function="negative l2", sampling_temperature=.3, adaptive_temp=False,
                  max_generation=50, requires_init=True, apply_bound="none", c=1.0,
