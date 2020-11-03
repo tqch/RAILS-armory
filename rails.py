@@ -91,6 +91,10 @@ class CNNAISE(nn.Module):
         self.hidden_layers = hidden_layers
         self.aise_params = aise_params
 
+        self.aise = []
+        for i,layer in enumerate(self.hidden_layers):
+            self.aise.append(AISE(self.x_train, self.y_train, hidden_layer=layer, model=self, **self.aise_params[str(i)]))
+
     def truncated_forward(self, truncate=None):
         assert truncate is not None, "truncate must be specified"
         if truncate == 0:
@@ -146,10 +150,9 @@ class CNNAISE(nn.Module):
         if x.size(1) != 1:
             x = x.permute([0,3,1,2])
         pred_sum = 0.
-        for i, layer in enumerate(self.hidden_layers):
-            aise = AISE(x_orig=self.x_train, y_orig=self.y_train, hidden_layer=layer, device=DEVICE, model=self, **self.aise_params[str(i)])
-            pred_sum = pred_sum + aise(x)
-        return torch.Tensor(pred_sum / len(self.hidden_layers))
+        for i in range(len(self.hidden_layers)):
+            pred_sum = pred_sum + self.aise[i](x)
+        return pred_sum/len(self.hidden_layers)
 
     @property
     def get_layers(self) -> List[str]:
