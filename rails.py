@@ -140,7 +140,7 @@ class CNNAISE(nn.Module):
         out_conv3 = F.dropout(F.relu(self.conv3(out_pool1)), 0.1, training=self.training)
         out_conv4 = F.dropout(F.relu(self.conv4(out_conv3)), 0.1, training=self.training)
         out_pool2 = F.max_pool2d(out_conv4, kernel_size=(2, 2))
-        out_view = out_pool2.view(-1, 128 * 7 * 7)
+        out_view = out_pool2.reshape(-1, 128 * 7 * 7)
         out_fc1 = F.dropout(F.relu(self.fc1(out_view)), 0.1, training=self.training)
         out_fc2 = F.dropout(F.relu(self.fc2(out_fc1)), 0.1, training=self.training)
         out = self.fc3(out_fc2)

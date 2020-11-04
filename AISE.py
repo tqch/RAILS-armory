@@ -7,6 +7,7 @@ import numpy as np
 import math,time
 from collections import Counter
 from copy import deepcopy
+from memory_profiler import profile
 
 class GenAdapt:
     '''
@@ -82,6 +83,7 @@ class AISE:
     implement the Adaptive Immune System Emulation
     '''
 
+    @profile
     def __init__(self, x_orig, y_orig, hidden_layer=None, model=None, input_shape=None, device=torch.device("cuda"),
                  n_class=10, n_neighbors=10, query_class="l2", norm_order=2, normalize=False,
                  avg_channel=False, fitness_function="negative l2", sampling_temperature=.3, adaptive_temp=False,
@@ -377,7 +379,8 @@ class AISE:
             return mem_bcs, mem_labs, pla_bcs, pla_labs, ant_logs
         else:
             return mem_bcs, mem_labs, pla_bcs, pla_labs
-        
+
+    @profile
     def __call__(self, ant):
         _,_,_,pla_labs,*_ = self.clonal_expansion(ant)
         # output the prediction of aise
