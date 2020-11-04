@@ -89,4 +89,5 @@ class CNNAISE(nn.Module):
         pred_sum = 0.
         for i in range(len(self.hidden_layers)):
             pred_sum = pred_sum + self.aise[i](x)
+        print(pred_sum/len(self.hidden_layers))
         return pred_sum/len(self.hidden_layers)
