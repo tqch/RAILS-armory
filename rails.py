@@ -47,7 +47,7 @@ class RAILSEvalWrapper(PyTorchClassifier):
 
 class CNNAISE(nn.Module):
 
-    def __init__(self, train_data, train_targets, hidden_layers, aise_params):
+    def __init__(self, train_data, train_targets, hidden_layers, aise_params, knowledge="black"):
         super(CNNAISE, self).__init__()
         self.conv1 = nn.Conv2d(1, 64, 3, padding=1)
         self.conv2 = nn.Conv2d(64, 64, 3, padding=1)
@@ -60,6 +60,7 @@ class CNNAISE(nn.Module):
         self.y_train = torch.LongTensor(train_targets)
         self.hidden_layers = hidden_layers
         self.aise_params = aise_params
+        self.knowledge = knowledge
 
         self.aise = []
         for i,layer in enumerate(self.hidden_layers):
@@ -121,10 +122,13 @@ class CNNAISE(nn.Module):
         # check if channel first
         if x.size(1) != 1:
             x = x.permute([0,3,1,2])
-        pred_sum = 0.
-        for i in range(len(self.hidden_layers)):
-            pred_sum = pred_sum + self.aise[i](x)
-        return pred_sum/len(self.hidden_layers)
+        if self.knowledge == "black":
+            pred_sum = 0.
+            for i in range(len(self.hidden_layers)):
+                pred_sum = pred_sum + self.aise[i](x)
+            return pred_sum/len(self.hidden_layers)
+        if self.knowledge == "white":
+            return self.forward(x)
 
     @property
     def get_layers(self):
