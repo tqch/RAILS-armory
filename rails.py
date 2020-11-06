@@ -3,43 +3,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from AISE import AISE
-import pickle,json
-import numpy as np
-
+from aise import AISE
 from art.classifiers import PyTorchClassifier
-import copy
 import logging
-import os
-import random
-import time
-from typing import Any, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
-
 import numpy as np
-import six
-
-from art.config import ART_DATA_PATH
-from art.estimators.classification.classifier import (
-    ClassGradientsMixin,
-    ClassifierMixin,
-)
-from art.estimators.pytorch import PyTorchEstimator
-from art.utils import Deprecated, deprecated_keyword_arg, check_and_transform_label_format
-
-if TYPE_CHECKING:
-    # pylint: disable=C0412
-    import torch
-
-    from art.utils import CLIP_VALUES_TYPE, PREPROCESSING_TYPE
-    from art.data_generators import DataGenerator
-    from art.defences.preprocessor import Preprocessor
-    from art.defences.postprocessor import Postprocessor
 
 logger = logging.getLogger(__name__)
-
-
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 
 class RAILSEvalWrapper(PyTorchClassifier):
     def __init__(self,**kwargs):
@@ -132,6 +102,7 @@ class CNNAISE(nn.Module):
         return out_conv4
 
     def forward(self, x):
+        # check if channel first
         if x.size(1) != 1:
             x = x.permute([0,3,1,2])
         out_conv1 = F.dropout(F.relu(self.conv1(x)), 0.1, training=self.training)
@@ -156,7 +127,7 @@ class CNNAISE(nn.Module):
         return pred_sum/len(self.hidden_layers)
 
     @property
-    def get_layers(self) -> List[str]:
+    def get_layers(self):
         """
         Return the hidden layers in the model, if applicable.
         :return: The hidden layers in the model, input and output layers excluded.
@@ -203,7 +174,7 @@ def get_art_model(model_kwargs, wrapper_kwargs, weights_path=None):
         model=model,
         loss=nn.CrossEntropyLoss(),
         optimizer=torch.optim.Adam(model.parameters(), lr=0.003),
-        input_shape=(1, 28, 28),
+        input_shape=(28, 28, 1),
         nb_classes=10,
         clip_values=(0.0, 1.0),
         **wrapper_kwargs,

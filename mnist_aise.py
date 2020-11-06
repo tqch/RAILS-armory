@@ -7,10 +7,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from AISE import AISE
+from aise import AISE
 import pickle
-import numpy as np
-# from collections import Counter
 
 
 class CNNAISE(nn.Module):

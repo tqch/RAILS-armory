@@ -2,17 +2,18 @@ import torch
 import torch.nn.functional as F
 from torch.distributions.categorical import Categorical
 from sklearn.neighbors import NearestNeighbors
-from sklearn.preprocessing import normalize
 import numpy as np
-import math,time
-from collections import Counter
+import math,time,logging
 from copy import deepcopy
 # from memory_profiler import profile
 
+logger = logging.getLogger(__name__)
+
+
 class GenAdapt:
-    '''
+    """
     core component of AISE B-cell generation
-    '''
+    """
 
     def __init__(self, mut_range, mut_prob, mode='random'):
         self.mut_range = mut_range
@@ -48,40 +49,32 @@ class GenAdapt:
         else:
             raise ValueError("Unsupported mutation type!")
 
-class MyTimer:
-    def __init__(self,title="default title"):
-        self.title = title
-    def __enter__(self):
-        self.start_time = time.perf_counter()
-        return self
-    def __exit__(self,*exc_args):
-        self.end_time = time.perf_counter()
-        print("{} ellapse time: {}".format(self.title,self.end_time-self.start_time))
-        
-            
+
 class L2NearestNeighbors(NearestNeighbors):
-    '''
+    """
     compatible query object class for euclidean distance
-    '''
+    """
 
     def __call__(self, X):
         return self.kneighbors(X, return_distance=False)
 
     
 def neg_l2_dist(x,y):
-    '''
+    """
     x: (1,n_feature)
     y: (N,n_feature)
-    '''
+    """
     return -(x-y).pow(2).sum(dim=1).sqrt()
+
 
 def inner_product(X, Y):
     return (X@Y.T)[0]
 
+
 class AISE:
-    '''
+    """
     implement the Adaptive Immune System Emulation
-    '''
+    """
 
     # @profile
     def __init__(self, x_orig, y_orig, hidden_layer=None, model=None, input_shape=None, device=torch.device("cuda"),
@@ -101,8 +94,8 @@ class AISE:
         if input_shape is None:
             try:
                 self.input_shape = tuple(self.x_orig.shape[1:])  # mnist: (1,28,28)
-            except:
-                print("Invalid data type for x_orig!")
+            except AttributeError:
+                logger.warning("Invalid data type for x_orig!")
         else:
             self.input_shape = input_shape
         
@@ -144,14 +137,15 @@ class AISE:
         try:
             self.model.to(self.device)
             self.model.eval()
-        except:
-            print("Invalid model!")
+        except AttributeError:
+            logger.warning("Invalid model!")
         
         try:
             self._query_objects = self._build_all_query_objects()
         except:
-            print("Cannot build query objects!")
-        
+            logger.warning("Cannot build query objects!")
+
+    @staticmethod
     def _get_fitness_func(self,func_str):
         if func_str == "negative l2":
             return neg_l2_dist
@@ -172,38 +166,31 @@ class AISE:
         if self.adaptive_temp:
             self.sampl_temp *= np.sqrt(xh_orig.shape[1]/np.prod(self.input_shape)).item()  # heuristic sampling temperature: proportion to the square root of feature space dimension
         if self.n_class:
-            print("Building query objects for {} classes {} samples...".format(self.n_class, self.x_orig.size(0)),
-                  end="")
+            logger.info("Building query objects for {} classes {} samples...".format(self.n_class, self.x_orig.size(0)))
             query_objects = [self._build_class_query_object(xh_orig,class_label=i) for i in range(self.n_class)]
-            print("done!")
         else:
-            print("Building one single query object {} samples...".format(self.x_orig.size(0)), end="")
+            logger.info("Building one single query object {} samples...".format(self.x_orig.size(0)))
             query_objects = [self._build_class_query_object(xh_orig)]
-            print("done!")
         return query_objects
         
     def _query_nns_ind(self, Q):
         assert Q.ndim == 2, "Q: 2d array-like (n_queries,n_features)"
         if self.n_class:
-            print("Searching {} naive B cells per class for each of {} antigens...".format(self.n_neighbors, len(Q)),
-                  end="")
+            logger.info("Searching {} naive B cells per class for each of {} antigens...".format(self.n_neighbors, len(Q)))
             rel_ind = [query_obj(Q) for query_obj in self._query_objects]
             abs_ind = []
             for c in range(self.n_class):
                 class_ind = np.where(self.y_orig.numpy() == c)[0]
                 abs_ind.append(class_ind[rel_ind[c]])
-            print("done!")
         else:
-            print("Searching {} naive B cells for each of {} antigens...".format(self.n_neighbors, Q.size(0)),
-                  end="")
+            logger.info("Searching {} naive B cells for each of {} antigens...".format(self.n_neighbors, Q.size(0)))
             abs_ind = [query_obj(Q) for query_obj in self._query_objects]
-            print('done!')
         return abs_ind
 
     def _hidden_repr_mapping(self, x, batch_size=2048, query=False):
-        '''
+        """
         transform b cells and antigens into inner representations of AISE
-        '''
+        """
         if self.hidden_layer is not None:
             xhs = []
             for i in range(0,x.size(0),batch_size):
@@ -226,6 +213,7 @@ class AISE:
                 xh = xh/xh.pow(2).sum(dim=1,keepdim=True).sqrt()
             return xh.detach()
 
+    @staticmethod
     def clip_class_bound(self,x,y,class_center,class_bound):
         return torch.min(torch.max(x,(class_center-class_bound)[y]),(class_center+class_bound)[y])
         
@@ -239,7 +227,7 @@ class AISE:
         else:
             mem_bcs = None
             mem_labs = None
-        print("Affinity maturation process starts with population of {}...".format(self.n_population))
+        logger.info("Affinity maturation process starts with population of {}...".format(self.n_population))
         ant_logs = []  # store the history dict in terms of metrics for antigens
         for n in range(ant.size(0)):
             # print(torch.cuda.memory_summary())
@@ -363,24 +351,19 @@ class AISE:
         return mem_bcs, mem_labs, pla_bcs, pla_labs, ant_logs
 
     def clonal_expansion(self, ant, y_ant=None):
-        print("Clonal expansion starts...")
+        logger.info("Clonal expansion starts...")
         ant_tran = self._hidden_repr_mapping(ant.detach())
-        try:
-            nbc_ind = self._query_nns_ind(ant_tran.detach().cpu().numpy())
-        except:
-            print("The object needs to be re-instaniated after one call!")
-        mem_bcs, mem_labs, pla_bcs, pla_labs, ant_logs = self.generate_b_cells(ant.flatten(start_dim=1), ant_tran,
-                                                                               nbc_ind)
+        nbc_ind = self._query_nns_ind(ant_tran.detach().cpu().numpy())
+        mem_bcs, mem_labs, pla_bcs, pla_labs, ant_logs = self.generate_b_cells(ant.flatten(start_dim=1), ant_tran, nbc_ind)
         if self.keep_memory:
-            print("{} plasma B cells and {} memory generated!".format(pla_bcs.shape[0]*self.n_plasma, mem_bcs.shape[0]*self.n_memory))
+            logger.info("{} plasma B cells and {} memory generated!".format(pla_bcs.shape[0]*self.n_plasma, mem_bcs.shape[0]*self.n_memory))
         else:
-            print("{} plasma B cells generated!".format(pla_bcs.shape[0]*self.n_plasma))
+            logger.info("{} plasma B cells generated!".format(pla_bcs.shape[0]*self.n_plasma))
         if self.return_log:
             return mem_bcs, mem_labs, pla_bcs, pla_labs, ant_logs
         else:
             return mem_bcs, mem_labs, pla_bcs, pla_labs
 
-    # @profile
     def __call__(self, ant):
         _,_,_,pla_labs,*_ = self.clonal_expansion(ant)
         # output the prediction of aise
