@@ -230,7 +230,7 @@ class AISE:
         logger.info("Affinity maturation process starts with population of {}...".format(self.n_population))
         ant_logs = []  # store the history dict in terms of metrics for antigens
         for n in range(ant.size(0)):
-            # print(torch.cuda.memory_summary())
+            # (torch.cuda.memory_summary())
             genadapt = GenAdapt(self.mut_range[1], self.mut_prob[1], mode=self.mut_mode)
             curr_gen = torch.cat([self.x_orig[ind[n]].flatten(start_dim=1) for ind in nbc_ind]).to(self.device)  # naive b cells
             labels = np.concatenate([self.y_orig[ind[n]] for ind in nbc_ind])

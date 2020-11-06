@@ -1,22 +1,20 @@
 {
-    "_description": "Test RAILS on mnist image classification",
+    "_description": "Evaluate RAILS on mnist image classification by HopSkipJump attacks",
     "adhoc": null,
-    "attack": {
-        "knowledge": "white",
+	"attack": {
+        "knowledge": "black",
         "kwargs": {
-            "batch_size": 1,
-            "eps": 0.2,
-            "eps_step": 0.1,
-            "minimal": false,
-            "num_random_init": 0,
-            "targeted": false
+            "norm": "inf",
+            "max_iter": 1,
+            "init_eval": 1,
+            "init_size": 1
         },
         "module": "art.attacks.evasion",
-        "name": "FastGradientMethod",
-        "use_label": true
+        "name": "HopSkipJump",
+        "use_label": false
     },
     "dataset": {
-        "batch_size": 64,
+        "batch_size": 2,
         "framework": "numpy",
         "module": "armory.data.datasets",
         "name": "mnist"
@@ -64,7 +62,7 @@
         "module": "rails",
         "name": "get_art_model",
         "weights_file": "mnist_rails_test.pt",
-        "wrapper_kwargs": {"channels_first": true}
+        "wrapper_kwargs": {"channels_first": false}
     },
     "scenario": {
         "kwargs": {},

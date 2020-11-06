@@ -1,0 +1,23 @@
+# This is a list of minimal requirements for running rails under armory evaluation framework
+
+coloredlogs
+docker #To prevent ImportError
+jsonschema
+requests
+tensorflow-datasets==3.2.0 # to load armory-default data
+jupyterlab==1.2.6
+boto3==1.11.13
+adversarial-robustness-toolbox==1.4.2
+Pillow==7.1.2
+pydub==0.24.1
+apache-beam==2.22.0
+dill==0.3.1.1
+pytest==5.3.5
+ffmpeg==4.2.3
+pymongo==3.1.0
+
+### Begin Pytorch required libraries
+pytorch==1.6.0
+torchvision==0.7.0
+cudatoolkit==10.1
+### End Pytorch required libraries
