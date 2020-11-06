@@ -3,12 +3,11 @@ import torch.nn.functional as F
 from torch.distributions.categorical import Categorical
 from sklearn.neighbors import NearestNeighbors
 import numpy as np
-import math,time,logging
+import math
 from copy import deepcopy
-# from memory_profiler import profile
+from utils.logger import get_default_logger
 
-logger = logging.getLogger(__name__)
-
+logger = get_default_logger("aise.AISE")
 
 class GenAdapt:
     """
@@ -76,7 +75,7 @@ class AISE:
     implement the Adaptive Immune System Emulation
     """
 
-    # @profile
+
     def __init__(self, x_orig, y_orig, hidden_layer=None, model=None, input_shape=None, device=torch.device("cuda"),
                  n_class=10, n_neighbors=10, query_class="l2", norm_order=2, normalize=False,
                  avg_channel=False, fitness_function="negative l2", sampling_temperature=.3, adaptive_temp=False,
