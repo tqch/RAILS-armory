@@ -146,7 +146,7 @@ class AISE:
             logger.warning("Cannot build query objects!")
 
     @staticmethod
-    def _get_fitness_func(self,func_str):
+    def _get_fitness_func(func_str):
         if func_str == "negative l2":
             return neg_l2_dist
         elif func_str == "inner product":
