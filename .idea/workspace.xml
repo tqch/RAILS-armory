@@ -3,6 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="452e797d-81a3-46af-9245-7509b335ad01" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/aise.py" beforeDir="false" afterPath="$PROJECT_DIR$/aise.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/example_scenario_configs/test_rails_fgsm.json" beforeDir="false" afterPath="$PROJECT_DIR$/example_scenario_configs/test_rails_fgsm.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/example_scenario_configs/test_rails_hopskipjump.json" beforeDir="false" afterPath="$PROJECT_DIR$/example_scenario_configs/test_rails_hopskipjump.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/rails.py" beforeDir="false" afterPath="$PROJECT_DIR$/rails.py" afterDir="false" />
@@ -30,8 +31,9 @@
   </component>
   <component name="PropertiesComponent">
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/scenario" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../armory-example/aise.py" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
+    <property name="two.files.diff.last.used.file" value="$PROJECT_DIR$/../armory-example/aise.py" />
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
@@ -80,6 +82,14 @@
     <servers />
   </component>
   <component name="WindowStateProjectService">
+    <state x="2012" y="92" width="1736" height="856" key="DiffContextDialog" timestamp="1604906522145">
+      <screen x="1920" y="0" width="1920" height="1040" />
+    </state>
+    <state x="2012" y="92" width="1736" height="856" key="DiffContextDialog/0.0.1536.824/1920.0.1920.1040@1920.0.1920.1040" timestamp="1604906522145" />
+    <state x="2610" y="217" key="FileChooserDialogImpl" timestamp="1604906433845">
+      <screen x="1920" y="0" width="1920" height="1040" />
+    </state>
+    <state x="2610" y="217" key="FileChooserDialogImpl/0.0.1536.824/1920.0.1920.1040@1920.0.1920.1040" timestamp="1604906433845" />
     <state width="1893" height="79" key="GridCell.Tab.0.bottom" timestamp="1604473276704">
       <screen x="1920" y="0" width="1920" height="1040" />
     </state>
@@ -96,10 +106,10 @@
       <screen x="1920" y="0" width="1920" height="1040" />
     </state>
     <state width="1893" height="79" key="GridCell.Tab.0.right/0.0.1536.824/1920.0.1920.1040@1920.0.1920.1040" timestamp="1604473276703" />
-    <state x="2103" y="0" key="SettingsEditor" timestamp="1604450647747">
+    <state x="2103" y="0" key="SettingsEditor" timestamp="1604906085380">
       <screen x="1920" y="0" width="1920" height="1040" />
     </state>
     <state x="146" y="0" key="SettingsEditor/0.0.1536.824/1920.0.1920.1040@0.0.1536.824" timestamp="1604423768489" />
-    <state x="2103" y="0" key="SettingsEditor/0.0.1536.824/1920.0.1920.1040@1920.0.1920.1040" timestamp="1604450647747" />
+    <state x="2103" y="0" key="SettingsEditor/0.0.1536.824/1920.0.1920.1040@1920.0.1920.1040" timestamp="1604906085380" />
   </component>
 </project>

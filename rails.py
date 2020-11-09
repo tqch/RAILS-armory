@@ -47,7 +47,7 @@ class RAILSEvalWrapper(PyTorchClassifier):
 
 class CNNAISE(nn.Module):
 
-    def __init__(self, train_data, train_targets, hidden_layers, aise_params, knowledge="black"):
+    def __init__(self, train_data, train_targets, hidden_layers, aise_params):
         super(CNNAISE, self).__init__()
         self.conv1 = nn.Conv2d(1, 64, 3, padding=1)
         self.conv2 = nn.Conv2d(64, 64, 3, padding=1)
@@ -60,7 +60,6 @@ class CNNAISE(nn.Module):
         self.y_train = torch.LongTensor(train_targets)
         self.hidden_layers = hidden_layers
         self.aise_params = aise_params
-        self.knowledge = knowledge
 
         self.aise = []
         for i,layer in enumerate(self.hidden_layers):
@@ -103,9 +102,6 @@ class CNNAISE(nn.Module):
         return out_conv4
 
     def forward(self, x):
-        # check if channel first
-        if x.size(1) != 1:
-            x = x.permute([0,3,1,2])
         out_conv1 = F.dropout(F.relu(self.conv1(x)), 0.1, training=self.training)
         out_conv2 = F.dropout(F.relu(self.conv2(out_conv1)), 0.1, training=self.training)
         out_pool1 = F.max_pool2d(out_conv2, kernel_size=(2, 2))
@@ -118,17 +114,21 @@ class CNNAISE(nn.Module):
         out = self.fc3(out_fc2)
         return [out,]
 
+    def __call__(self,x):
+        # check if channel first
+        if x.size(1) != 1:
+            x = x.permute([0,3,1,2])
+        return self.forward(x)
+
     def predict(self, x):
         # check if channel first
         if x.size(1) != 1:
             x = x.permute([0,3,1,2])
-        if self.knowledge == "black":
-            pred_sum = 0.
-            for i in range(len(self.hidden_layers)):
-                pred_sum = pred_sum + self.aise[i](x)
-            return pred_sum/len(self.hidden_layers)
-        if self.knowledge == "white":
-            return self.forward(x)
+
+        pred_sum = 0.
+        for i in range(len(self.hidden_layers)):
+            pred_sum = pred_sum + self.aise[i](x)
+        return pred_sum / len(self.hidden_layers)
 
     @property
     def get_layers(self):
@@ -173,6 +173,8 @@ def get_art_model(model_kwargs, wrapper_kwargs, weights_path=None):
     model = make_mnist_model(train_data=checkpoint["train_data"],train_targets=checkpoint["train_targets"],**model_kwargs)
     model.to(DEVICE)
     model.load_state_dict(checkpoint["state_dict"])
+    for params in model.parameters():
+        params.requires_grad_(False)
 
     wrapped_model = RAILSEvalWrapper(
         model=model,
