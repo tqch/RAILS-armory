@@ -8,6 +8,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class GenAdapt:
     """
     core component of AISE B-cell generation
@@ -80,7 +81,7 @@ class AISE:
                  max_generation=50, requires_init=True, apply_bound="none", c=1.0,
                  mut_range=(.05, .15), mut_prob=(.05, .15), mut_mode="crossover",
                  decay=(.9, .9), n_population=1000, memory_threshold=.25, plasma_threshold=.05,
-                 keep_memory=False, return_log=True):
+                 keep_memory=False, return_log=False):
 
         self.model = model
         self.device = device
@@ -183,7 +184,7 @@ class AISE:
         else:
             logger.info("Searching {} naive B cells for each of {} antigens...".format(self.n_neighbors, Q.size(0)))
             abs_ind = [query_obj(Q) for query_obj in self._query_objects]
-        return abs_ind
+        return np.concatenate(abs_ind,axis=1)
 
     def _hidden_repr_mapping(self, x, batch_size=2048, query=False):
         """
@@ -226,13 +227,15 @@ class AISE:
             mem_bcs = None
             mem_labs = None
         logger.info("Affinity maturation process starts with population of {}...".format(self.n_population))
-        ant_logs = []  # store the history dict in terms of metrics for antigens
+        if self.return_log:
+            ant_logs = []  # store the history dict in terms of metrics for antigens
+        else:
+            ant_logs = None
+
         for n in range(ant.size(0)):
-            # (torch.cuda.memory_summary())
             genadapt = GenAdapt(self.mut_range[1], self.mut_prob[1], mode=self.mut_mode)
-            curr_gen = torch.cat([self.x_orig[ind[n]].flatten(start_dim=1) for ind in nbc_ind]).to(
-                self.device)  # naive b cells
-            labels = np.concatenate([self.y_orig[ind[n]] for ind in nbc_ind])
+            curr_gen = torch.Tensor(self.x_orig[nbc_ind[n]]).flatten(start_dim=1).to(self.device)  # naive b cells
+            labels = torch.LongTensor(self.y_orig[nbc_ind[n]]).to(self.device)
             if self.apply_bound != "none":
                 class_center = []
                 if self.apply_bound == "hard":
@@ -250,7 +253,7 @@ class AISE:
                     "n_population should be divisible by the product of n_class and n_neighbors"
                 curr_gen = curr_gen.repeat((self.n_population // (self.n_class * self.n_neighbors), 1))
                 curr_gen = genadapt.mutate_random(curr_gen)  # initialize *NOTE: torch.Tensor.repeat <> numpy.repeat
-                labels = np.tile(labels, self.n_population // (self.n_class * self.n_neighbors))
+                labels = labels.repeat(self.n_population // (self.n_class * self.n_neighbors))
                 if self.apply_bound == "hard":
                     curr_gen = self.clip_class_bound(curr_gen, labels, class_center, class_bound)
             curr_repr = self._hidden_repr_mapping(curr_gen.view((-1,) + self.x_orig.size()[1:]))
@@ -262,33 +265,48 @@ class AISE:
             num_plateau = 0
             ant_log = dict()  # history log for each antigen
             # zeroth generation logging
-            fitness_pop_hist = []
-            pop_fitness = fitness_score.sum().item()
-            fitness_pop_hist.append(pop_fitness)
-            if y_ant is not None:
-                fitness_true_class_hist = []
-                pct_true_class_hist = []
-                true_class_fitness = fitness_score[labels == y_ant[n]].sum().item()
-                fitness_true_class_hist.append(true_class_fitness)
-                true_class_pct = (labels == y_ant[n]).astype('float').mean().item()
-                pct_true_class_hist.append(true_class_pct)
+            if self.return_log:
+                fitness_pop_hist = []
+                pop_fitness = fitness_score.sum().item()
+                fitness_pop_hist.append(pop_fitness)
+                if y_ant is not None:
+                    fitness_true_class_hist = []
+                    pct_true_class_hist = []
+                    true_class_fitness = fitness_score[labels == y_ant[n]].sum().item()
+                    fitness_true_class_hist.append(true_class_fitness)
+                    true_class_pct = (labels == y_ant[n]).astype('float').mean().item()
+                    pct_true_class_hist.append(true_class_pct)
 
-            static_index = torch.LongTensor(torch.arange(len(labels))).to(self.device)
+            # active classes in the initial generation
+            class_vector = torch.arange(self.n_class)[:,None].to(self.device)
+
             for i in range(self.max_generation):
                 survival_prob = F.softmax(fitness_score / self.sampl_temp, dim=-1)
                 parents_ind1 = Categorical(probs=survival_prob).sample((self.n_population,))
+
+                parent_pos = (labels[parents_ind1]==class_vector)
+                class_count = parent_pos.sum(dim=1)
+                active_class = (class_count>0) # active classes in the current generation
+                class_vector = class_vector[active_class]
+
+                # check homogeneity
+                if len(class_vector) == 1:
+                    break # early stop
+
                 if self.mut_mode == "crossover":
-                    parents_ind2 = torch.zeros_like(parents_ind1)
-                    for c in range(self.n_class):
-                        pos = static_index[labels[parents_ind1.cpu()] == c]
-                        if len(pos):
-                            parents_ind2_class = Categorical(
-                                probs=F.softmax(fitness_score[static_index[labels == c]] / self.sampl_temp,
-                                                dim=-1)).sample((len(pos),))
-                            parents_ind2[pos] = static_index[labels == c][parents_ind2_class.cpu()]
-                    parent_pairs = [curr_gen[parents_ind1], curr_gen[parents_ind2]]
-                    curr_gen = genadapt(parent_pairs, fitness_score[parents_ind1] / \
-                                        (fitness_score[parents_ind1] + fitness_score[parents_ind2]))
+                    parents_ind2 = torch.zeros_like(parents_ind1) # second parents
+
+                    parent_pos = parent_pos[active_class]
+                    class_pos = (labels==class_vector)
+                    class_probs = survival_prob.where(class_pos,torch.zeros_like(survival_prob))
+
+                    for pos,probs,cnt in zip(parent_pos,class_probs,class_count[active_class]):
+                        parents_ind2_class = Categorical(probs=probs).sample((cnt,))
+                        parents_ind2[pos] = parents_ind2_class
+                    parent_pairs = [curr_gen[parents_ind1],curr_gen[parents_ind2]]
+                    # crossover between two parents
+                    curr_gen = genadapt(parent_pairs, fitness_score[parents_ind1] /\
+                                      (fitness_score[parents_ind1]+fitness_score[parents_ind2]))
                 else:
                     parents = curr_gen[parents_ind1]
                     curr_gen = genadapt(parents)
@@ -304,17 +322,14 @@ class AISE:
                     fitness_score = fitness_score + self.c * F.pairwise_distance(curr_gen, class_center[labels])
                 pop_fitness = fitness_score.sum().item()
 
-                # logging
-                fitness_pop_hist.append(pop_fitness)
-                if y_ant is not None:
-                    true_class_fitness = fitness_score[labels == y_ant[n]].sum().item()
-                    fitness_true_class_hist.append(true_class_fitness)
-                    true_class_pct = (labels == y_ant[n]).astype('float').mean().item()
-                    pct_true_class_hist.append(true_class_pct)
-
-                # check homogeneity
-                if len(np.unique(labels)) == 1:
-                    break  # early stop
+                if self.return_log:
+                    # logging
+                    fitness_pop_hist.append(pop_fitness)
+                    if y_ant is not None:
+                        true_class_fitness = fitness_score[labels == y_ant[n]].sum().item()
+                        fitness_true_class_hist.append(true_class_fitness)
+                        true_class_pct = (labels == y_ant[n]).astype('float').mean().item()
+                        pct_true_class_hist.append(true_class_pct)
 
                 # adaptive shrinkage of certain hyper-parameters
                 if self.decay:
@@ -332,18 +347,20 @@ class AISE:
                     else:
                         best_pop_fitness = pop_fitness
             _, fitness_rank = torch.sort(fitness_score.cpu())
-            ant_log["fitness_pop"] = fitness_pop_hist
-            if y_ant is not None:
-                ant_log["fitness_true_class"] = fitness_true_class_hist
-                ant_log["pct_true_class"] = pct_true_class_hist
+            if self.return_log:
+                ant_log["fitness_pop"] = fitness_pop_hist
+                if y_ant is not None:
+                    ant_log["fitness_true_class"] = fitness_true_class_hist
+                    ant_log["pct_true_class"] = pct_true_class_hist
             pla_bcs.append(curr_gen[fitness_rank[-self.n_plasma:]].detach().cpu())
-            pla_labs.append(labels[fitness_rank[-self.n_plasma:]])
+            pla_labs.append(labels[fitness_rank[-self.n_plasma:]].cpu().numpy())
             if self.keep_memory:
-                mem_bcs.append(curr_gen[fitness_rank[-(self.n_memory + self.n_plasma):-self.n_plasma]].detach().cpu())
-                mem_labs.append(labels[fitness_rank[-(self.n_memory + self.n_plasma):-self.n_plasma]])
-            ant_logs.append(ant_log)
+                mem_bcs.append(curr_gen[fitness_rank[-(self.n_memory+self.n_plasma):-self.n_plasma]].detach().cpu())
+                mem_labs.append(labels[fitness_rank[-(self.n_memory+self.n_plasma):-self.n_plasma]].cpu().numpy())
+            if self.return_log:
+                ant_logs.append(ant_log)
 
-        pla_bcs = torch.stack(pla_bcs).view((-1, self.n_plasma) + self.input_shape).numpy()
+        pla_bcs = torch.stack(pla_bcs).view((-1,self.n_plasma)+self.input_shape).numpy()
         pla_labs = np.stack(pla_labs).astype(np.int)
         if self.keep_memory:
             mem_bcs = torch.stack(mem_bcs).view((-1, self.n_mem) + self.input_shape).numpy()
@@ -355,16 +372,12 @@ class AISE:
         logger.info("Clonal expansion starts...")
         ant_tran = self._hidden_repr_mapping(ant.detach())
         nbc_ind = self._query_nns_ind(ant_tran.detach().cpu().numpy())
-        mem_bcs, mem_labs, pla_bcs, pla_labs, ant_logs = self.generate_b_cells(ant.flatten(start_dim=1), ant_tran,
-                                                                               nbc_ind)
+        mem_bcs, mem_labs, pla_bcs, pla_labs, ant_logs = self.generate_b_cells(ant.flatten(start_dim=1), ant_tran, nbc_ind)
         if self.keep_memory:
             logger.info("{} plasma B cells and {} memory generated!".format(pla_bcs.shape[0]*self.n_plasma, mem_bcs.shape[0]*self.n_memory))
         else:
             logger.info("{} plasma B cells generated!".format(pla_bcs.shape[0]*self.n_plasma))
-        if self.return_log:
-            return mem_bcs, mem_labs, pla_bcs, pla_labs, ant_logs
-        else:
-            return mem_bcs, mem_labs, pla_bcs, pla_labs
+        return mem_bcs, mem_labs, pla_bcs, pla_labs, ant_logs
 
     def __call__(self, ant):
         _, _, _, pla_labs, *_ = self.clonal_expansion(ant)

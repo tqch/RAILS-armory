@@ -4,9 +4,7 @@
     <list default="true" id="452e797d-81a3-46af-9245-7509b335ad01" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/aise.py" beforeDir="false" afterPath="$PROJECT_DIR$/aise.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example_scenario_configs/test_rails_fgsm.json" beforeDir="false" afterPath="$PROJECT_DIR$/example_scenario_configs/test_rails_fgsm.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example_scenario_configs/test_rails_hopskipjump.json" beforeDir="false" afterPath="$PROJECT_DIR$/example_scenario_configs/test_rails_hopskipjump.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/rails.py" beforeDir="false" afterPath="$PROJECT_DIR$/rails.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -31,9 +29,9 @@
   </component>
   <component name="PropertiesComponent">
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/../armory-example/aise.py" />
+    <property name="last_opened_file_path" value="$USER_HOME$/Downloads/aise.py" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
-    <property name="two.files.diff.last.used.file" value="$PROJECT_DIR$/../armory-example/aise.py" />
+    <property name="two.files.diff.last.used.file" value="$USER_HOME$/Downloads/aise.py" />
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
@@ -82,14 +80,14 @@
     <servers />
   </component>
   <component name="WindowStateProjectService">
-    <state x="2012" y="92" width="1736" height="856" key="DiffContextDialog" timestamp="1604906522145">
+    <state x="2012" y="92" width="1736" height="856" key="DiffContextDialog" timestamp="1605846432179">
       <screen x="1920" y="0" width="1920" height="1040" />
     </state>
-    <state x="2012" y="92" width="1736" height="856" key="DiffContextDialog/0.0.1536.824/1920.0.1920.1040@1920.0.1920.1040" timestamp="1604906522145" />
-    <state x="2610" y="217" key="FileChooserDialogImpl" timestamp="1604906433845">
+    <state x="2012" y="92" width="1736" height="856" key="DiffContextDialog/0.0.1536.824/1920.0.1920.1040@1920.0.1920.1040" timestamp="1605846432179" />
+    <state x="2610" y="217" key="FileChooserDialogImpl" timestamp="1605846378389">
       <screen x="1920" y="0" width="1920" height="1040" />
     </state>
-    <state x="2610" y="217" key="FileChooserDialogImpl/0.0.1536.824/1920.0.1920.1040@1920.0.1920.1040" timestamp="1604906433845" />
+    <state x="2610" y="217" key="FileChooserDialogImpl/0.0.1536.824/1920.0.1920.1040@1920.0.1920.1040" timestamp="1605846378389" />
     <state width="1893" height="79" key="GridCell.Tab.0.bottom" timestamp="1604473276704">
       <screen x="1920" y="0" width="1920" height="1040" />
     </state>

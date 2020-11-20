@@ -1,5 +1,6 @@
 # This is a list of minimal requirements for running rails under armory evaluation framework
 
+armory-testbed==0.12.1
 coloredlogs
 docker #To prevent ImportError
 jsonschema
