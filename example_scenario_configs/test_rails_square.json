@@ -5,8 +5,7 @@
         "knowledge": "black",
         "kwargs": {
             "norm": "inf",
-            "max_iter": 5,
-
+            "max_iter": 5
         },
         "module": "art.attacks.evasion",
         "name": "SquareAttack",

@@ -8,7 +8,7 @@ requests
 tensorflow-datasets==3.2.0 # to load armory-default data
 jupyterlab==1.2.6
 boto3==1.11.13
-adversarial-robustness-toolbox==1.4.2
+adversarial-robustness-toolbox>=1.4.3
 Pillow==7.1.2
 pydub==0.24.1
 apache-beam==2.22.0
