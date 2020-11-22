@@ -121,7 +121,7 @@ class CNNAISE(nn.Module):
             x = x.permute([0,3,1,2])
         return self.forward(x)
 
-    def predict(self, x):
+    def predict(self, x, batch_size=None):
         # check if channel first
         if x.size(1) != 1:
             x = x.permute([0,3,1,2])

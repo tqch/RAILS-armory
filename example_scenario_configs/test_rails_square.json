@@ -1,18 +1,15 @@
 {
-    "_description": "Evaluate RAILS on mnist image classification by ZOO attacks",
+    "_description": "Evaluate RAILS on mnist image classification by square attacks",
     "adhoc": null,
 	"attack": {
         "knowledge": "black",
         "kwargs": {
+            "norm": "inf",
             "max_iter": 5,
-            "binary_search_steps": 1,
-            "abort_early": true,
-            "use_resize": false,
-            "use_importance": false,
-            "nb_parallel": 128
+
         },
         "module": "art.attacks.evasion",
-        "name": "ZooAttack",
+        "name": "SquareAttack",
         "use_label": false
     },
     "dataset": {
