@@ -5,9 +5,8 @@
         "knowledge": "black",
         "kwargs": {
             "max_iter": 5,
-            "init_eval": 1,
-            "max_eval": 10,
-            "init_size": 20,
+            "binary_search_steps": 1,
+            "abort_early": true,
             "use_resize": false,
             "use_importance": false,
             "nb_parallel": 512
