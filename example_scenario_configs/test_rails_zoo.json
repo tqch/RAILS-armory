@@ -9,7 +9,7 @@
             "abort_early": true,
             "use_resize": false,
             "use_importance": false,
-            "nb_parallel": 512
+            "nb_parallel": 128
         },
         "module": "art.attacks.evasion",
         "name": "ZooAttack",
