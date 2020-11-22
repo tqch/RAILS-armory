@@ -4,7 +4,6 @@
 	"attack": {
         "knowledge": "black",
         "kwargs": {
-            "norm": "inf",
             "max_iter": 5,
             "init_eval": 1,
             "max_eval": 10,
