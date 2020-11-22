@@ -5,14 +5,15 @@
         "knowledge": "black",
         "kwargs": {
             "norm": "inf",
-            "max_iter": 5
+            "max_iter": 20,
+            "batch_size": 64
         },
         "module": "art.attacks.evasion",
         "name": "SquareAttack",
         "use_label": false
     },
     "dataset": {
-        "batch_size": 1,
+        "batch_size": 64,
         "framework": "numpy",
         "module": "armory.data.datasets",
         "name": "mnist"
