@@ -8,7 +8,7 @@
             "es": 0
         },
         "module": "art.attacks.evasion",
-        "name": "PixelAttack",
+        "name": "ThresholdAttack",
         "use_label": false
     },
     "dataset": {
