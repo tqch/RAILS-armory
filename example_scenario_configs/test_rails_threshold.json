@@ -1,15 +1,14 @@
 {
-    "_description": "Evaluate RAILS on mnist image classification by square attacks",
+    "_description": "Evaluate RAILS on mnist image classification by threshold attacks",
     "adhoc": null,
 	"attack": {
         "knowledge": "black",
         "kwargs": {
-            "norm": "inf",
-            "max_iter": 20,
-            "batch_size": 1
+            "th": 128,
+            "es": 0
         },
         "module": "art.attacks.evasion",
-        "name": "SquareAttack",
+        "name": "PixelAttack",
         "use_label": false
     },
     "dataset": {

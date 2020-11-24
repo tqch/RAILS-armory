@@ -63,9 +63,9 @@ class CNNAISE(nn.Module):
         self.aise_params = aise_params
 
         self.aise = []
-        for i,layer in enumerate(self.hidden_layers):
+        for layer in self.hidden_layers:
             self.aise.append(AISE(self.x_train, self.y_train, hidden_layer=layer,
-                                  model=self, device=DEVICE, **self.aise_params[str(i)]))
+                                  model=self, device=DEVICE, **self.aise_params[str(layer)]))
 
     def truncated_forward(self, truncate=None):
         assert truncate is not None, "truncate must be specified"
