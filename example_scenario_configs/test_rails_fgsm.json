@@ -56,7 +56,7 @@
                 2,
                 3
 				],
-            "attack_cnn": false
+            "attack_cnn": true
         },
         "module": "rails",
         "name": "get_art_model",
@@ -70,7 +70,7 @@
     },
     "sysconfig": {
         "docker_image": "twosixarmory/pytorch:0.12.1",
-        "external_github_repo": "tqch/aise_eval",
+        "external_github_repo": null,
         "gpus": "all",
         "output_dir": null,
         "output_filename": null,

@@ -31,22 +31,24 @@ class RAILSEvalWrapper(PyTorchClassifier):
         results = np.zeros((x_preprocessed.shape[0], self.nb_classes), dtype=np.float32)
         num_batch = int(np.ceil(len(x_preprocessed) / float(batch_size)))
 
+        mask_aise = False # whether to hide aise from attacks
         if self._model.attack_cnn:
-            # caller = inspect.currentframe().f_back.f_code.co_name
             callers = [f.function for f in inspect.stack()]
+            # check if the call is from attacker (for evaluation purpose only)
             if "generate" in callers:
-                print("Attacking...")
-                for m in range(num_batch):
-                    begin, end = (
-                        m * batch_size,
-                        min((m + 1) * batch_size, x_preprocessed.shape[0]),
-                    )
-                    with torch.no_grad():
-                        output = self._model(torch.from_numpy(x_preprocessed[begin:end]).to(self._device))[0].cpu().numpy()
-                    results[begin:end] = output
-                # Apply postprocessing
-                predictions = self._apply_postprocessing(preds=results, fit=False)
-                return predictions
+                mask_aise = True
+        if mask_aise:
+            for m in range(num_batch):
+                begin, end = (
+                    m * batch_size,
+                    min((m + 1) * batch_size, x_preprocessed.shape[0]),
+                )
+                with torch.no_grad():
+                    output = self._model(torch.from_numpy(x_preprocessed[begin:end]).to(self._device))[0].cpu().numpy()
+                results[begin:end] = output
+            # Apply postprocessing
+            predictions = self._apply_postprocessing(preds=results, fit=False)
+            return predictions
         else:
             for m in range(num_batch):
                 # Batch indexes
