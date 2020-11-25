@@ -4,7 +4,7 @@
     "attack": {
         "knowledge": "white",
         "kwargs": {
-            "batch_size": 64,
+            "batch_size": 200,
             "eps": 0.2,
             "eps_step": 0.1,
             "minimal": false,
@@ -16,7 +16,7 @@
         "use_label": true
     },
     "dataset": {
-        "batch_size": 64,
+        "batch_size": 200,
         "framework": "numpy",
         "module": "armory.data.datasets",
         "name": "mnist"
@@ -55,7 +55,8 @@
                 1,
                 2,
                 3
-				]
+				],
+            "attack_cnn": false
         },
         "module": "rails",
         "name": "get_art_model",

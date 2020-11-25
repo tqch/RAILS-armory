@@ -7,6 +7,7 @@ from aise import AISE
 from art.classifiers import PyTorchClassifier
 import logging
 import numpy as np
+import inspect
 
 logger = logging.getLogger(__name__)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -29,26 +30,41 @@ class RAILSEvalWrapper(PyTorchClassifier):
         # Run prediction with batch processing
         results = np.zeros((x_preprocessed.shape[0], self.nb_classes), dtype=np.float32)
         num_batch = int(np.ceil(len(x_preprocessed) / float(batch_size)))
-        for m in range(num_batch):
-            # Batch indexes
-            begin, end = (
-                m * batch_size,
-                min((m + 1) * batch_size, x_preprocessed.shape[0]),
-            )
 
-            with torch.no_grad():
-                output = self._model.predict(torch.from_numpy(x_preprocessed[begin:end]).to(self._device))
-            results[begin:end] = output
-
-        # Apply postprocessing
-        predictions = self._apply_postprocessing(preds=results, fit=False)
-
-        return predictions
+        if self._model.attack_cnn:
+            # caller = inspect.currentframe().f_back.f_code.co_name
+            callers = [f.function for f in inspect.stack()]
+            if "generate" in callers:
+                print("Attacking...")
+                for m in range(num_batch):
+                    begin, end = (
+                        m * batch_size,
+                        min((m + 1) * batch_size, x_preprocessed.shape[0]),
+                    )
+                    with torch.no_grad():
+                        output = self._model(torch.from_numpy(x_preprocessed[begin:end]).to(self._device))[0].cpu().numpy()
+                    results[begin:end] = output
+                # Apply postprocessing
+                predictions = self._apply_postprocessing(preds=results, fit=False)
+                return predictions
+        else:
+            for m in range(num_batch):
+                # Batch indexes
+                begin, end = (
+                    m * batch_size,
+                    min((m + 1) * batch_size, x_preprocessed.shape[0]),
+                )
+                with torch.no_grad():
+                    output = self._model.predict(torch.from_numpy(x_preprocessed[begin:end]).to(self._device))
+                results[begin:end] = output
+            # Apply postprocessing
+            predictions = self._apply_postprocessing(preds=results, fit=False)
+            return predictions
 
 
 class CNNAISE(nn.Module):
 
-    def __init__(self, train_data, train_targets, hidden_layers, aise_params):
+    def __init__(self, train_data, train_targets, hidden_layers, aise_params, attack_cnn):
         super(CNNAISE, self).__init__()
         self.conv1 = nn.Conv2d(1, 64, 3, padding=1)
         self.conv2 = nn.Conv2d(64, 64, 3, padding=1)
@@ -61,6 +77,7 @@ class CNNAISE(nn.Module):
         self.y_train = torch.LongTensor(train_targets)
         self.hidden_layers = hidden_layers
         self.aise_params = aise_params
+        self.attack_cnn = attack_cnn
 
         self.aise = []
         for layer in self.hidden_layers:
@@ -184,6 +201,6 @@ def get_art_model(model_kwargs, wrapper_kwargs, weights_path=None):
         input_shape=(28, 28, 1),
         nb_classes=10,
         clip_values=(0.0, 1.0),
-        **wrapper_kwargs,
+        **wrapper_kwargs
     )
     return wrapped_model

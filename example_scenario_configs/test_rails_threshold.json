@@ -51,7 +51,8 @@
                 1,
                 2,
                 3
-				]
+				],
+            "attack_cnn": false
         },
         "module": "rails",
         "name": "get_art_model",
