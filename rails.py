@@ -156,16 +156,7 @@ class CNNAISE(nn.Module):
 
     @property
     def get_layers(self):
-        """
-        Return the hidden layers in the model, if applicable.
-        :return: The hidden layers in the model, input and output layers excluded.
-        .. warning:: `get_layers` tries to infer the internal structure of the model.
-                     This feature comes with no guarantees on the correctness of the result.
-                     The intended order of the layers tries to match their order in the model, but this
-                     is not guaranteed either. In addition, the function can only infer the internal
-                     layers if the input model is of type `nn.Sequential`, otherwise, it will only
-                     return the logit layer.
-        """
+
         import torch.nn as nn
 
         result = []
