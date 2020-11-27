@@ -20,7 +20,7 @@ class RAILSEvalWrapper(PyTorchClassifier):
     def _make_model_wrapper(self, model):
         return model
 
-    def predict(self, x, batch_size=128, **kwargs):
+    def predict(self, x, batch_size=256, **kwargs):
 
         self._model.eval()
 
@@ -66,7 +66,7 @@ class RAILSEvalWrapper(PyTorchClassifier):
 
 class CNNAISE(nn.Module):
 
-    def __init__(self, train_data, train_targets, hidden_layers, aise_params, attack_cnn):
+    def __init__(self, train_data, train_targets, hidden_layers, aise_params, attack_cnn=False, state_dict=None):
         super(CNNAISE, self).__init__()
         self.conv1 = nn.Conv2d(1, 64, 3, padding=1)
         self.conv2 = nn.Conv2d(64, 64, 3, padding=1)
@@ -75,6 +75,10 @@ class CNNAISE(nn.Module):
         self.fc1 = nn.Linear(128 * 7 * 7, 256)
         self.fc2 = nn.Linear(256, 256)
         self.fc3 = nn.Linear(256, 10)
+
+        if state_dict is not None:
+            self.load_state_dict(state_dict)
+
         self.x_train = torch.Tensor(train_data)
         self.y_train = torch.LongTensor(train_targets)
         self.hidden_layers = hidden_layers
@@ -190,9 +194,11 @@ def make_mnist_model(**kwargs):
 def get_art_model(model_kwargs, wrapper_kwargs, weights_path=None):
     assert weights_path is not None
     checkpoint = torch.load(weights_path, map_location=DEVICE)
-    model = make_mnist_model(train_data=checkpoint["train_data"],train_targets=checkpoint["train_targets"],**model_kwargs)
+    model = make_mnist_model(train_data=checkpoint["train_data"],train_targets=checkpoint["train_targets"],
+                             state_dict=checkpoint["state_dict"],**model_kwargs)
     model.to(DEVICE)
-    model.load_state_dict(checkpoint["state_dict"])
+
+    # disable gradients
     for params in model.parameters():
         params.requires_grad_(False)
 
