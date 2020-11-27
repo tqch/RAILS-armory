@@ -157,8 +157,6 @@ class CNNAISE(nn.Module):
     @property
     def get_layers(self):
 
-        import torch.nn as nn
-
         result = []
         if isinstance(self, nn.Sequential):
             # pylint: disable=W0212
