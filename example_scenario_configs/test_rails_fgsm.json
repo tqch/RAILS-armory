@@ -1,5 +1,5 @@
 {
-    "_description": "Evaluate RAILS on mnist image classification by FGSM attacks",
+    "_description": "Evaluate RAILS on mnist image classification task by FGSM attacks",
     "adhoc": null,
     "attack": {
         "knowledge": "white",

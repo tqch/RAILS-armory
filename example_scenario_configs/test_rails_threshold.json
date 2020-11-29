@@ -1,5 +1,5 @@
 {
-    "_description": "Evaluate RAILS on mnist image classification by threshold attacks",
+    "_description": "Evaluate RAILS on mnist image classification task by threshold attacks",
     "adhoc": null,
 	"attack": {
         "knowledge": "black",

@@ -1,22 +1,19 @@
 {
-    "_description": "Evaluate RAILS on mnist image classification task by ZOO attacks",
+    "_description": "Evaluate RAILS on mnist image classification task by Wasserstein attacks",
     "adhoc": null,
 	"attack": {
-        "knowledge": "black",
+        "knowledge": "white",
         "kwargs": {
-            "max_iter": 5,
-            "binary_search_steps": 1,
-            "abort_early": true,
-            "use_resize": false,
-            "use_importance": false,
-            "nb_parallel": 128
+          "regularization": 0.1,
+          "batch_size": 10,
+          "eps": 0.5
         },
         "module": "art.attacks.evasion",
-        "name": "ZooAttack",
+        "name": "Wasserstein",
         "use_label": false
     },
     "dataset": {
-        "batch_size": 1,
+        "batch_size": 10,
         "framework": "numpy",
         "module": "armory.data.datasets",
         "name": "mnist"
@@ -55,8 +52,8 @@
                 1,
                 2,
                 3
-            ],
-            "attack_cnn": false
+				],
+            "attack_cnn": true
         },
         "module": "rails",
         "name": "get_art_model",
@@ -70,7 +67,7 @@
     },
     "sysconfig": {
         "docker_image": "twosixarmory/pytorch:0.12.1",
-        "external_github_repo": "tqch/aise_eval",
+        "external_github_repo": null,
         "gpus": "all",
         "output_dir": null,
         "output_filename": null,
