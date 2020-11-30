@@ -4,15 +4,9 @@
 	"attack": {
         "knowledge": "white",
         "kwargs": {
-            "regularization": 100,
-            "batch_size": 10,
-            "max_iter": 10,
-            "conjugate_sinkhorn_max_iter": 10,
-            "projected_sinkhorn_max_iter": 10,
-            "eps_factor": 1.05,
-            "eps_iter": 10,
-            "eps": 0.3,
-            "kernel_size": 5
+          "regularization": 1000,
+          "batch_size": 10,
+          "eps": 0.5
         },
         "module": "art.attacks.evasion",
         "name": "Wasserstein",
