@@ -1,23 +1,27 @@
 {
-    "_description": "Evaluate RAILS on mnist image classification task by Wasserstein attacks",
+    "_description": "Evaluate RAILS on mnist image classification task by Patch attacks",
     "adhoc": null,
-	"attack": {
+    "attack": {
         "knowledge": "white",
         "kwargs": {
-            "regularization": 1000,
-            "batch_size": 10,
-            "max_iter": 400,
-            "eps_factor": 1.1,
-            "eps_iter": 10,
-            "eps": 0.3,
-            "kernel_size": 5
+            "apply_patch_args": [],
+            "apply_patch_kwargs": {
+            "scale": 0.3
+            },
+            "rotation_max": 15,
+            "scale_min": 0.4,
+            "scale_max": 1.0,
+            "learning_rate": 5.0,
+            "max_iter": 20,
+            "batch_size": 1
         },
         "module": "art.attacks.evasion",
-        "name": "Wasserstein",
-        "use_label": false
+        "name": "AdversarialPatch",
+        "type": "patch",
+        "use_label": true
     },
     "dataset": {
-        "batch_size": 10,
+        "batch_size": 1,
         "framework": "numpy",
         "module": "armory.data.datasets",
         "name": "mnist"
@@ -25,7 +29,7 @@
     "defense": null,
     "metric": {
         "means": true,
-        "perturbation": "linf",
+        "perturbation": "image_circle_patch_diameter",
         "record_metric_per_sample": false,
         "task": [
             "categorical_accuracy"
