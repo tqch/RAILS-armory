@@ -34,7 +34,7 @@ class Calibration():
 
 
 
-class CKNN():
+class DKNN():
     def __init__(self, model, device, x_train, y_train, 
                  batch_size, n_neighbors, n_embs):
         self.model         = model

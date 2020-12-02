@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from aise import AISE
-from DeepkNN import CKNN
+from dknn import DKNN
 from art.classifiers import PyTorchClassifier
 import logging
 import numpy as np
@@ -96,7 +96,7 @@ class CNNAISE(nn.Module):
                 self.aise.append(AISE(self.x_train, self.y_train, hidden_layer=layer,
                                       model=self, device=DEVICE, **self.aise_params[str(layer)]))
         else:
-            self.dknn = CKNN(
+            self.dknn = DKNN(
                 model=self,
                 device=DEVICE,
                 x_train=self.x_train,

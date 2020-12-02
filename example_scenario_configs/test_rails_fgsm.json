@@ -57,7 +57,7 @@
                 3
 				],
             "attack_cnn": true,
-            "use_dknn": true
+            "use_dknn": false
         },
         "module": "rails",
         "name": "get_art_model",
