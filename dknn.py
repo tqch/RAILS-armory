@@ -3,23 +3,13 @@
 
 # In[ ]:
 
-
-
-
 from collections import Counter
-
-import matplotlib.pyplot   as plt
-import matplotlib.gridspec as gridspec
 import math
 import numpy as np
-
-from sklearn.metrics.pairwise import cosine_distances
-from sklearn.neighbors        import NearestNeighbors
+from tqdm import trange
+from sklearn.neighbors import NearestNeighbors
 
 import torch
-import torch.nn            as nn
-import torch.nn.functional as F
-import torch.optim         as optim
 
 
 class Calibration():
@@ -27,40 +17,41 @@ class Calibration():
         self.x = x_cali
         self.y = y_cali
         self.n_sample = len(y_cali)
+
     def __getitem__(self, index):
         return self.x[index], self.y[index]
-    def __len__(self):
-        return self.n_sample  
 
+    def __len__(self):
+        return self.n_sample
 
 
 class DKNN():
-    def __init__(self, model, device, x_train, y_train, 
+    def __init__(self, model, device, x_train, y_train,
                  batch_size, n_neighbors, n_embs):
-        self.model         = model
+        self.model = model
         self.model.to(device)
         self.model.eval()
-        self.device        = device
+        self.device = device
         self.input_shape = x_train.shape[1:]
 
-        self.batch_size    = batch_size
-        self.n_neighbors   = n_neighbors
-        self.n_embs        = n_embs
-        
+        self.batch_size = batch_size
+        self.n_neighbors = n_neighbors
+        self.n_embs = n_embs
+
         self.rng = np.random.RandomState(1)
 
         x_train, y_train, self.calib_dataset = self._sep_data(x_train, y_train)
-        
-        self.conv_features = self._buid_rep_train(x_train)
+
+        self.conv_features = self._build_rep_train(x_train)
         self.train_targets = y_train
-        self.neighs          = self._build_neighs()
+        self.neighs = self._build_neighs()
         self.alpha_calib_sum = self._build_calibration()
 
     def _sep_data(self, xx, yy):
         calieps = 720
-        cali_indice = np.array([i for i in range(0,xx.size(0),math.floor(xx.size(0)/calieps))])
-        cali_images = np.zeros((calieps,)+self.input_shape)
-        cali_labels = self.rng.randint(0,10, calieps)
+        cali_indice = np.array([i for i in range(0, xx.size(0), math.floor(xx.size(0) / calieps))])
+        cali_images = np.zeros((calieps,) + self.input_shape)
+        cali_labels = self.rng.randint(0, 10, calieps)
         for i in range(calieps):
             cali_images[i] = xx[cali_indice[i]]
             cali_labels[i] = yy[i]
@@ -71,36 +62,20 @@ class DKNN():
         calib_dataset = Calibration(cali_images.astype(np.float32), cali_labels)
         return x_train, y_train, calib_dataset
 
-    def _buid_rep_train(self, xx_batch_train, batchs=2000):
-        xhs = []
-        for i in range(0, len(xx_batch_train), batchs):
-            xx = xx_batch_train[i:i + batchs]
-            conv_train = self._feature_space(self.model, 4, torch.Tensor(xx), self.device)
-            if i == 0:
-                xhs = conv_train
-            else:
-                xhs[0] = np.concatenate((xhs[0],conv_train[0]),axis=0)
-                xhs[1] = np.concatenate((xhs[1],conv_train[1]),axis=0)
-                xhs[2] = np.concatenate((xhs[2],conv_train[2]),axis=0)
-                xhs[3] = np.concatenate((xhs[3],conv_train[3]),axis=0)
-        return xhs
-
-    def _feature_space(self, cnnmod, num_rep, data, device):
+    def _build_rep_train(self, xx_batch_train, batchs=2000):
         print('Building the feature spaces from the selected set.')
-
-        conv_features = [[] for _ in range(num_rep)]
-        targets       = []
-        predictions   = []
-        print('\tRunning predictions')
-        cnnmod.eval()
-        data = data.to(device)
-        *out_convs, _ = cnnmod(data)
-        for i, out_conv in enumerate(out_convs):
-            conv_feat = out_conv.contiguous().reshape(out_conv.size(0), -1).cpu().detach().numpy()
-            conv_features[i].append(conv_feat)
-        conv_features = [np.concatenate(out_convs) for out_convs in conv_features]
-
-        return conv_features
+        xhs = [[] for _ in range(self.n_embs)]
+        for i in trange(0, len(xx_batch_train), batchs):
+            xx = xx_batch_train[i:i + batchs]
+            *out_convs, _ = self.model(torch.Tensor(xx).to(self.device))
+            for j, out_conv in enumerate(out_convs):
+                out_conv = out_conv.contiguous().reshape(out_conv.size(0), -1).cpu().detach().numpy()
+                xhs[j].append(out_conv)
+        print([out_convs[0].shape for out_convs in xhs])
+        xhs = [np.concatenate(out_convs, axis=0) for out_convs in xhs]
+        print([out_convs.shape for out_convs in xhs])
+        print("Finished.")
+        return xhs
 
     def _build_calibration(self):
         print('Building calibration set.')
@@ -158,12 +133,11 @@ class DKNN():
     def _get_closest_points(self, X):
         *out_convs,_ = self.model(X.to(self.device))
         neighbors_by_layer = []
-        out_convs = out_convs#out_convs#[out_convs[0],]#out_convs#[out_convs[3],]
         for i, (neigh, layer_emb) in enumerate(zip(self.neighs, out_convs)):
             emb       = layer_emb.detach().cpu().reshape(X.size(0), -1).numpy()
             neighbors = neigh.kneighbors(emb, return_distance = False) 
             neighbors_by_layer.append(neighbors)
-        return torch.tensor(np.stack(neighbors_by_layer, axis = 1))#, y_pred
+        return torch.tensor(np.stack(neighbors_by_layer, axis = 1))
 
     def predict(self, X):
         p_value     = self._compute_p_value(X)
@@ -175,27 +149,4 @@ class DKNN():
         confidence  = 1 - partition[:, -2]
         
         return p_value, confidence, credibility
-    
-    def predict_interpretation(self, X, y = None):
-        img_data = lambda img: reverse_normalize(img.to(self.device).squeeze().permute(1,2,0)).data.cpu().numpy().clip(0, 1)
-        plt.figure(figsize = (12, 6))
-        gs       = gridspec.GridSpec(4, 4 + self.n_neighbors)
-        ax_big   = plt.subplot(gs[:, :4])
-        ax_grid  = [[plt.subplot(gs[i, j]) for j in range(4, 4 + self.n_neighbors)] for i in range(4)]
-        ax_big.imshow(img_data(X))
-        ax_big.axis('off')
-        neighbors_by_layer, y_pred = self._get_closest_points(X.unsqueeze(0))
-        print(neighbors_by_layer)
-        print(y_pred)
-        for ax_line, closest_layer in zip(ax_grid, neighbors_by_layer[0]):
-            for ax_cell, train_ex_id in zip(ax_line, closest_layer):
-                img = self.train_dataset[train_ex_id][0]
-                ax_cell.imshow(img_data(img))
-                ax_cell.axis('off')
-
-        if y is not None:
-            print(f'Real class: {cifar_cats[y]}')
-        print(f'Predicted class: {cifar_cats[y_pred.argmax(dim = 1).cpu().item()]}')
-        
-        return y_pred
 
