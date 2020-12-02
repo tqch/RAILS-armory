@@ -2,12 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="452e797d-81a3-46af-9245-7509b335ad01" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/example_scenario_configs/test_rails_newtonfool.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DeepkNN.py" beforeDir="false" afterPath="$PROJECT_DIR$/dknn.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dknn_armory.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/example_scenario_configs/test_rails_fgsm.json" beforeDir="false" afterPath="$PROJECT_DIR$/example_scenario_configs/test_rails_fgsm.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/rails.py" beforeDir="false" afterPath="$PROJECT_DIR$/rails.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
