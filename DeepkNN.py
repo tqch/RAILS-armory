@@ -4,16 +4,13 @@
 # In[ ]:
 
 
-import os
-import sys
-import pickle
+
 
 from collections import Counter
 
 import matplotlib.pyplot   as plt
 import matplotlib.gridspec as gridspec
-from tqdm import tqdm, tqdm_notebook
-
+import math
 import numpy as np
 
 from sklearn.metrics.pairwise import cosine_distances
@@ -44,26 +41,25 @@ class CKNN():
         self.model.to(device)
         self.model.eval()
         self.device        = device
+        self.input_shape = x_train.shape[1:]
+
         self.batch_size    = batch_size
         self.n_neighbors   = n_neighbors
         self.n_embs        = n_embs
         
         self.rng = np.random.RandomState(1)
-        
-        
+
         x_train, y_train, self.calib_dataset = self._sep_data(x_train, y_train)
         
         self.conv_features = self._buid_rep_train(x_train)
-        self. train_targets = y_train
+        self.train_targets = y_train
         self.neighs          = self._build_neighs()
         self.alpha_calib_sum = self._build_calibration()
-        
-        
-        
+
     def _sep_data(self, xx, yy):
         calieps = 720
-        cali_indice = np.array([i for i in range(0,xx.size(0),round(xx.size(0)/calieps))])
-        cali_images = np.zeros((calieps, 3, 32, 32))
+        cali_indice = np.array([i for i in range(0,xx.size(0),math.floor(xx.size(0)/calieps))])
+        cali_images = np.zeros((calieps,)+self.input_shape)
         cali_labels = self.rng.randint(0,10, calieps)
         for i in range(calieps):
             cali_images[i] = xx[cali_indice[i]]
@@ -74,8 +70,7 @@ class CKNN():
         y_train = np.delete(y_train, cali_indice, axis=0)
         calib_dataset = Calibration(cali_images.astype(np.float32), cali_labels)
         return x_train, y_train, calib_dataset
-    
-    
+
     def _buid_rep_train(self, xx_batch_train, batchs=2000):
         xhs = []
         for i in range(0, len(xx_batch_train), batchs):
@@ -89,8 +84,7 @@ class CKNN():
                 xhs[2] = np.concatenate((xhs[2],conv_train[2]),axis=0)
                 xhs[3] = np.concatenate((xhs[3],conv_train[3]),axis=0)
         return xhs
-    
-    
+
     def _feature_space(self, cnnmod, num_rep, data, device):
         print('Building the feature spaces from the selected set.')
 
@@ -100,15 +94,13 @@ class CKNN():
         print('\tRunning predictions')
         cnnmod.eval()
         data = data.to(device)
-        *out_convs, y_pred = cnnmod.feature_forward(data)
+        *out_convs, _ = cnnmod(data)
         for i, out_conv in enumerate(out_convs):
             conv_feat = out_conv.contiguous().reshape(out_conv.size(0), -1).cpu().detach().numpy()
             conv_features[i].append(conv_feat)
         conv_features = [np.concatenate(out_convs) for out_convs in conv_features]
 
         return conv_features
-
-  
 
     def _build_calibration(self):
         print('Building calibration set.')
@@ -164,7 +156,7 @@ class CKNN():
         return empirical_p_value
     
     def _get_closest_points(self, X):
-        *out_convs, y_pred = self.model.feature_forward(X.to(self.device))
+        *out_convs,_ = self.model(X.to(self.device))
         neighbors_by_layer = []
         out_convs = out_convs#out_convs#[out_convs[0],]#out_convs#[out_convs[3],]
         for i, (neigh, layer_emb) in enumerate(zip(self.neighs, out_convs)):

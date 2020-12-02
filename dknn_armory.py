@@ -109,11 +109,7 @@ class VGG(nn.Module):
             n_neighbors   = 10,
             n_embs        = 4 
             )
-    
-    
-   
-            
-            
+
     def truncated_forward(self,truncate=None):
         assert truncate is not None,"truncate must be specified"
         if truncate == 0:
@@ -124,8 +120,7 @@ class VGG(nn.Module):
             return self.forward3
         else:
             return self.forward4
-    
-    
+
     def forward1(self, x):
         out1 = self.f1(x)
         out2 = self.f2(out1)

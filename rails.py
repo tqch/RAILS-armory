@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from aise import AISE
+from DeepkNN import CKNN
 from art.classifiers import PyTorchClassifier
 import logging
 import numpy as np
@@ -44,7 +45,7 @@ class RAILSEvalWrapper(PyTorchClassifier):
                     min((m + 1) * batch_size, x_preprocessed.shape[0]),
                 )
                 with torch.no_grad():
-                    output = self._model(torch.from_numpy(x_preprocessed[begin:end]).to(self._device))[0].cpu().numpy()
+                    output = self._model(torch.from_numpy(x_preprocessed[begin:end]).to(self._device))[-1].cpu().numpy()
                 results[begin:end] = output
             # Apply postprocessing
             predictions = self._apply_postprocessing(preds=results, fit=False)
@@ -66,7 +67,8 @@ class RAILSEvalWrapper(PyTorchClassifier):
 
 class CNNAISE(nn.Module):
 
-    def __init__(self, train_data, train_targets, hidden_layers, aise_params, attack_cnn=False, state_dict=None):
+    def __init__(self, train_data, train_targets, hidden_layers, aise_params,
+                 use_dknn=False, attack_cnn=False, state_dict=None):
         super(CNNAISE, self).__init__()
         self.conv1 = nn.Conv2d(1, 64, 3, padding=1)
         self.conv2 = nn.Conv2d(64, 64, 3, padding=1)
@@ -81,14 +83,28 @@ class CNNAISE(nn.Module):
 
         self.x_train = torch.Tensor(train_data)
         self.y_train = torch.LongTensor(train_targets)
-        self.hidden_layers = hidden_layers
-        self.aise_params = aise_params
+        self.input_shape = self.x_train.shape[1:] # channel first
+
+        self.use_dknn = use_dknn
         self.attack_cnn = attack_cnn
 
-        self.aise = []
-        for layer in self.hidden_layers:
-            self.aise.append(AISE(self.x_train, self.y_train, hidden_layer=layer,
-                                  model=self, device=DEVICE, **self.aise_params[str(layer)]))
+        if not self.use_dknn:
+            self.hidden_layers = hidden_layers
+            self.aise_params = aise_params
+            self.aise = []
+            for layer in self.hidden_layers:
+                self.aise.append(AISE(self.x_train, self.y_train, hidden_layer=layer,
+                                      model=self, device=DEVICE, **self.aise_params[str(layer)]))
+        else:
+            self.dknn = CKNN(
+                model=self,
+                device=DEVICE,
+                x_train=self.x_train,
+                y_train=self.y_train,
+                batch_size=1024,
+                n_neighbors=10,
+                n_embs=4
+            )
 
     def truncated_forward(self, truncate=None):
         assert truncate is not None, "truncate must be specified"
@@ -136,23 +152,26 @@ class CNNAISE(nn.Module):
         out_fc1 = F.dropout(F.relu(self.fc1(out_view)), 0.1, training=self.training)
         out_fc2 = F.dropout(F.relu(self.fc2(out_fc1)), 0.1, training=self.training)
         out = self.fc3(out_fc2)
-        return [out,]
+        return out_conv1,out_conv2,out_conv3,out_conv4,out
 
     def __call__(self,x):
         # check if channel first
-        if x.size(1) != 1:
+        if x.size(1) != self.input_shape[0]:
             x = x.permute([0,3,1,2])
         return self.forward(x)
 
     def predict(self, x, batch_size=None):
         # check if channel first
-        if x.size(1) != 1:
+        if x.size(1) != self.input_shape[0]:
             x = x.permute([0,3,1,2])
-
-        pred_sum = 0.
-        for i in range(len(self.hidden_layers)):
-            pred_sum = pred_sum + self.aise[i](x)
-        return pred_sum / len(self.hidden_layers)
+        if self.use_dknn:
+            pred, _, _ = self.dknn.predict(x)
+            return pred
+        else:
+            pred_sum = 0.
+            for i in range(len(self.hidden_layers)):
+                pred_sum = pred_sum + self.aise[i](x)
+            return pred_sum / len(self.hidden_layers)
 
     @property
     def get_layers(self):

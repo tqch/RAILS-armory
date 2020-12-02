@@ -2,10 +2,17 @@
 (no system-level docker installation needed)
 
 ## Attacks tested
+### White-box
 - FGSM
 - PGD
+### Black-box
 - ZOO
+- Patch
+- Shadow
+- Square
+- Threshold
 - HopSkipJump
+- Wasserstein (non $l_p$)
 
 ## Usage
 
