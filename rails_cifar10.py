@@ -136,16 +136,10 @@ class VGGAISE(nn.Module):
         return out3
     
     def forward3(self, x):
-#         out1 = self.f1(x)
-#         out2 = self.f2(out1)
-        # out3 = self.f3(x)
         out4 = self.f4(x)
         return out4
     
     def forward4(self, x):
-#         out1 = self.f1(x)
-#         out2 = self.f2(out1)
-        # out3 = self.f3(x)
         out4 = self.f4(x)
         out45 = self.f5(out4)
         out5 = self.layer(out45)
