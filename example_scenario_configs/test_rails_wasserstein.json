@@ -6,15 +6,17 @@
         "kwargs": {
             "regularization": 1000,
             "batch_size": 10,
-            "max_iter": 400,
+            "max_iter": 50,
+            "conjugate_sinkhorn_max_iter": 200,
+            "projected_sinkhorn_max_iter": 200,
             "eps_factor": 1.05,
-            "eps_iter": 10,
+            "eps_iter": 5,
             "eps": 0.3,
             "kernel_size": 5
         },
         "module": "art.attacks.evasion",
         "name": "Wasserstein",
-        "use_label": false
+        "use_label": true
     },
     "dataset": {
         "batch_size": 10,

@@ -71,9 +71,7 @@ class DKNN():
             for j, out_conv in enumerate(out_convs):
                 out_conv = out_conv.contiguous().reshape(out_conv.size(0), -1).cpu().detach().numpy()
                 xhs[j].append(out_conv)
-        print([out_convs[0].shape for out_convs in xhs])
         xhs = [np.concatenate(out_convs, axis=0) for out_convs in xhs]
-        print([out_convs.shape for out_convs in xhs])
         print("Finished.")
         return xhs
 
