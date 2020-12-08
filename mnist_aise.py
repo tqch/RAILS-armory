@@ -9,10 +9,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 from aise import AISE
 import pickle
+import numpy as np
 
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class CNNAISE(nn.Module):
-    def __init__(self,train_data,train_targets,hidden_layers,aise_params):
+    def __init__(self,train_data,train_targets,hidden_layers,aise_params,checkpoint=None,device=DEVICE):
         super(CNNAISE, self).__init__()
         self.conv1 = nn.Conv2d(1 , 64 , 3, padding = 1)
         self.conv2 = nn.Conv2d(64, 64 , 3, padding = 1)
@@ -21,6 +23,13 @@ class CNNAISE(nn.Module):
         self.fc1   = nn.Linear(128 * 7 * 7, 256)
         self.fc2   = nn.Linear(256       , 256)
         self.fc3   = nn.Linear(256       , 10)
+
+        self.device = device
+        self.to(self.device)
+
+        if checkpoint:
+            self._load_state_dict(checkpoint)
+
         self.x_train = self._load_data_from_file(train_data)
         self.y_train = self._load_data_from_file(train_targets)
         self.hidden_layers = hidden_layers
@@ -29,10 +38,20 @@ class CNNAISE(nn.Module):
         self.aise = []
         for i,layer in enumerate(self.hidden_layers):
             self.aise.append(AISE(self.x_train, self.y_train, hidden_layer=layer, model=self, **self.aise_params[str(i)]))
-        
+
+    def _load_state_dict(self,file_path):
+        checkpoint = torch.load(file_path,map_location=self.device)
+        self.load_state_dict(checkpoint["state_dict"])
+
     def _load_data_from_file(self,file_path):
         with open(file_path,"rb") as f:
-            return torch.Tensor(pickle.load(f))
+            temp = pickle.load(f)
+            if isinstance(temp,np.ndarray):
+                return torch.from_numpy(temp)
+            elif isinstance(temp,torch.Tensor):
+                return temp.cpu()
+            else:
+                raise ValueError("Unsupported data type!")
        
     def truncated_forward(self,truncate=None):
         assert truncate is not None,"truncate must be specified"
@@ -87,5 +106,4 @@ class CNNAISE(nn.Module):
         pred_sum = 0.
         for i in range(len(self.hidden_layers)):
             pred_sum = pred_sum + self.aise[i](x)
-        print(pred_sum/len(self.hidden_layers))
         return pred_sum/len(self.hidden_layers)
