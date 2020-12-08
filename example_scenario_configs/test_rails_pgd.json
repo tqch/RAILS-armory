@@ -12,7 +12,7 @@
             "targeted": false
         },
         "module": "art.attacks.evasion",
-        "name": "FastGradientMethod",
+        "name": "ProjectedGradientDescent",
         "use_label": true
     },
     "dataset": {

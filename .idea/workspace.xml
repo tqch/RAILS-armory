@@ -3,9 +3,6 @@
   <component name="ChangeListManager">
     <list default="true" id="452e797d-81a3-46af-9245-7509b335ad01" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mnist_aise.py" beforeDir="false" afterPath="$PROJECT_DIR$/mnist_aise.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/smoke_test_config.json" beforeDir="false" afterPath="$PROJECT_DIR$/smoke_test_config.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_cnnaise.py" beforeDir="false" afterPath="$PROJECT_DIR$/test_cnnaise.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
