@@ -21,7 +21,7 @@ class RAILSEvalWrapper(PyTorchClassifier):
     def _make_model_wrapper(self, model):
         return model
 
-    def predict(self, x, batch_size=256, **kwargs):
+    def predict(self, x, batch_size=512, **kwargs):
 
         self._model.eval()
 
