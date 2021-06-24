@@ -1,4 +1,4 @@
-# External Repo of Armory Testbed for RAILS Evaluation
+# External Repo of RAILS Evaluation via Armory Testbed
 (no system-level docker installation needed)
 
 ## Attacks for testing
@@ -12,7 +12,7 @@
 
 ## Usage
 
-Make integrated model ready for the armory-testbed:
+Make integrated model ready for Armory:
 ```buildoutcfg
 python make_saved_model.py
 ```
