@@ -1,0 +1,78 @@
+{
+    "_description": "Evaluate RAILS on cifar-10 image classification by square attacks",
+    "adhoc": null,
+    "attack": {
+        "knowledge": "black",
+        "kwargs": {
+            "norm": "inf",
+            "max_iter": 30,
+            "eps": 0.093
+        },
+        "module": "art.attacks.evasion",
+        "name": "SquareAttack",
+        "use_label": false
+    },
+    "dataset": {
+        "batch_size": 500,
+        "framework": "numpy",
+        "module": "armory.data.datasets",
+        "name": "cifar10"
+    },
+    "defense": null,
+    "metric": {
+        "means": true,
+        "perturbation": "linf",
+        "record_metric_per_sample": false,
+        "task": [
+            "categorical_accuracy"
+        ]
+    },
+    "model": {
+        "fit": false,
+        "fit_kwargs": {
+            "nb_epochs": 20
+        },
+        "model_kwargs": {
+            "start_layer": 1,
+            "n_class": 10,
+            "aise_params": [
+                {
+                    "hidden_layer": 2,
+                    "sampling_temperature": 1,
+                    "max_generation": 10,
+                    "mut_range": [0.005, 0.015],
+                    "mut_prob": [0.05,0.15]
+                },
+                {
+                    "hidden_layer": 3,
+                    "sampling_temperature": 10,
+                    "max_generation": 5,
+                    "mut_range": [0.005, 0.015]
+                }
+            ],
+            "hidden_layers": [
+                2,
+                3
+            ],
+            "attack_cnn": true,
+            "use_dknn": false
+        },
+        "module": "rails",
+        "name": "get_art_model",
+        "weights_file": "cifar_vgg16.pt",
+        "wrapper_kwargs": {"channels_first": false}
+    },
+    "scenario": {
+        "kwargs": {},
+        "module": "armory.scenarios.image_classification",
+        "name": "ImageClassificationTask"
+    },
+    "sysconfig": {
+        "docker_image": "twosixarmory/pytorch:0.12.1",
+        "external_github_repo": "tqch/aise_eval",
+        "gpus": "all",
+        "output_dir": null,
+        "output_filename": null,
+        "use_gpu": false
+    }
+}

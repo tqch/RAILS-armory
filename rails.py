@@ -1,18 +1,21 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from aise import AISE
 from dknn import DKNN
+from models.vgg import VGG16
 from art.classifiers import PyTorchClassifier
 import logging
 import numpy as np
 import inspect
+from armory import paths
+from collections import deque
 
 logger = logging.getLogger(__name__)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 
 class RAILSEvalWrapper(PyTorchClassifier):
     def __init__(self,**kwargs):
@@ -21,7 +24,7 @@ class RAILSEvalWrapper(PyTorchClassifier):
     def _make_model_wrapper(self, model):
         return model
 
-    def predict(self, x, batch_size=512, **kwargs):
+    def predict(self, x, batch_size=500, **kwargs):
 
         self._model.eval()
 
@@ -31,7 +34,7 @@ class RAILSEvalWrapper(PyTorchClassifier):
         # Run prediction with batch processing
         results = np.zeros((x_preprocessed.shape[0], self.nb_classes), dtype=np.float32)
         num_batch = int(np.ceil(len(x_preprocessed) / float(batch_size)))
-
+        
         mask_aise = False # whether to hide aise from attacks
         if self._model.attack_cnn:
             callers = [f.function for f in inspect.stack()]
@@ -64,27 +67,43 @@ class RAILSEvalWrapper(PyTorchClassifier):
             predictions = self._apply_postprocessing(preds=results, fit=False)
             return predictions
 
-
-class CNNAISE(nn.Module):
-
-    def __init__(self, train_data, train_targets, hidden_layers, aise_params,
-                 use_dknn=False, attack_cnn=False, state_dict=None):
-        super(CNNAISE, self).__init__()
-        self.conv1 = nn.Conv2d(1, 64, 3, padding=1)
-        self.conv2 = nn.Conv2d(64, 64, 3, padding=1)
-        self.conv3 = nn.Conv2d(64, 128, 3, padding=1)
-        self.conv4 = nn.Conv2d(128, 128, 3, padding=1)
-        self.fc1 = nn.Linear(128 * 7 * 7, 256)
-        self.fc2 = nn.Linear(256, 256)
-        self.fc3 = nn.Linear(256, 10)
-
+    
+class RAILS(nn.Module):
+    def __init__(
+        self,
+        model,
+        train_data,
+        train_targets,
+        hidden_layers,
+        query_objects,
+        aise_params,
+        batch_size=1024,
+        n_class=None,
+        start_layer=None,
+        attack_cnn=False,
+        use_dknn=False,
+        state_dict=None
+    ):    
+        super(RAILS, self).__init__()
         if state_dict is not None:
             self.load_state_dict(state_dict)
-
-        self.x_train = torch.Tensor(train_data)
-        self.y_train = torch.LongTensor(train_targets)
-        self.input_shape = self.x_train.shape[1:] # channel first
-
+        
+        self.start_layer = start_layer or -1
+        self.n_class = n_class or 10
+        
+        self._model = self.reconstruct_model(model, self.start_layer)
+        
+        self.batch_size = batch_size
+        with torch.no_grad():
+            self.train_data = torch.cat([
+                self._model.to_start(train_data[i:i + self.batch_size].to(DEVICE)).cpu()
+                for i in range(0, train_data.size(0), self.batch_size)
+            ], dim=0).cpu()
+        self.input_shape = self.train_data.shape[1:]
+        self.train_targets = train_targets.cpu()
+        
+        self.query_objects = query_objects
+        
         self.use_dknn = use_dknn
         self.attack_cnn = attack_cnn
 
@@ -92,89 +111,117 @@ class CNNAISE(nn.Module):
             self.hidden_layers = hidden_layers
             self.aise_params = aise_params
             self.aise = []
-            for layer in self.hidden_layers:
-                self.aise.append(AISE(self.x_train, self.y_train, hidden_layer=layer,
-                                      model=self, device=DEVICE, **self.aise_params[str(layer)]))
+            for i,layer in enumerate(self.hidden_layers):
+                self.aise.append(AISE(
+                    self.train_data,
+                    self.train_targets,
+                    query_objects=query_objects[str(layer)],
+                    model=self._model, 
+                    device=DEVICE, 
+                    **self.aise_params[i]
+                ))
         else:
             self.dknn = DKNN(
                 model=self,
-                device=DEVICE,
-                x_train=self.x_train,
-                y_train=self.y_train,
-                batch_size=1024,
-                n_neighbors=10,
-                n_embs=4
+                train_data=train_data,
+                y_train=train_targets,
+                n_neighbors=5,
+                device=DEVICE
             )
+    
+    def _make_layers(self, cfg, in_channels):
+        layers = []
+#         in_channels = 3
+        for x in cfg:
+            if x == 'M':
+                layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
+            else:
+                layers += [nn.Conv2d(in_channels, x, kernel_size=3, padding=1),
+                           nn.BatchNorm2d(x),
+                           nn.ReLU(inplace=True)]
+                in_channels = x        
+        return nn.Sequential(*layers)
 
-    def truncated_forward(self, truncate=None):
-        assert truncate is not None, "truncate must be specified"
-        if truncate == 0:
-            return self.partial_forward_1
-        elif truncate == 1:
-            return self.partial_forward_2
-        elif truncate == 2:
-            return self.partial_forward_3
-        else:
-            return self.partial_forward_4
+    def reconstruct_model(self, model, start_layer):
 
-    def partial_forward_1(self, x):
-        out_conv1 = F.dropout(F.relu(self.conv1(x)), 0.1, training=self.training)
-        return out_conv1
+        class InternalModel(nn.Module):
+            def __init__(self, model, start_layer=-1):
+                super(InternalModel, self).__init__()
+                self._model = model
+                self.start_layer = start_layer
+                self.feature_mappings = deque(
+                    mod[1] for mod in self._model.named_children()
+                    if not ("feature" in mod[0] or "classifier" in mod[0])
+                )
+                self.n_layers = len(self.feature_mappings)
 
-    def partial_forward_2(self, x):
-        out_conv1 = F.dropout(F.relu(self.conv1(x)), 0.1, training=self.training)
-        out_conv2 = F.dropout(F.relu(self.conv2(out_conv1)), 0.1, training=self.training)
-        return out_conv2
+                self.to_start = nn.Sequential()
+                if hasattr(model, "feature"):
+                    self.to_start.add_module(model.feature)
+                for i in range(start_layer + 1):
+                    self.to_start.add_module(
+                        f"pre_start_layer{i}", self.feature_mappings.popleft()
+                    )
 
-    def partial_forward_3(self, x):
-        out_conv1 = F.dropout(F.relu(self.conv1(x)), 0.1, training=self.training)
-        out_conv2 = F.dropout(F.relu(self.conv2(out_conv1)), 0.1, training=self.training)
-        out_pool1 = F.max_pool2d(out_conv2, kernel_size=(2, 2))
-        out_conv3 = F.dropout(F.relu(self.conv3(out_pool1)), 0.1, training=self.training)
-        return out_conv3
+                self.hidden_layers = range(self.n_layers-self.start_layer-1)
 
-    def partial_forward_4(self, x):
-        out_conv1 = F.dropout(F.relu(self.conv1(x)), 0.1, training=self.training)
-        out_conv2 = F.dropout(F.relu(self.conv2(out_conv1)), 0.1, training=self.training)
-        out_pool1 = F.max_pool2d(out_conv2, kernel_size=(2, 2))
-        out_conv3 = F.dropout(F.relu(self.conv3(out_pool1)), 0.1, training=self.training)
-        out_conv4 = F.dropout(F.relu(self.conv4(out_conv3)), 0.1, training=self.training)
-        return out_conv4
+                self.truncated_forwards = [nn.Identity()]
+                self.truncated_forwards.extend([
+                    self._customize_mapping(hidden_layer)
+                    for hidden_layer in self.hidden_layers
+                ])
 
-    def forward(self, x):
-        out_conv1 = F.dropout(F.relu(self.conv1(x)), 0.1, training=self.training)
-        out_conv2 = F.dropout(F.relu(self.conv2(out_conv1)), 0.1, training=self.training)
-        out_pool1 = F.max_pool2d(out_conv2, kernel_size=(2, 2))
-        out_conv3 = F.dropout(F.relu(self.conv3(out_pool1)), 0.1, training=self.training)
-        out_conv4 = F.dropout(F.relu(self.conv4(out_conv3)), 0.1, training=self.training)
-        out_pool2 = F.max_pool2d(out_conv4, kernel_size=(2, 2))
-        out_view = out_pool2.reshape(-1, 128 * 7 * 7)
-        out_fc1 = F.dropout(F.relu(self.fc1(out_view)), 0.1, training=self.training)
-        out_fc2 = F.dropout(F.relu(self.fc2(out_fc1)), 0.1, training=self.training)
-        out = self.fc3(out_fc2)
-        return out_conv1,out_conv2,out_conv3,out_conv4,out
+            def _customize_mapping(self, end_layer=None):
+                feature_mappings = list(self.feature_mappings)[:end_layer + 1]
 
+                def truncated_forward(x):
+                    for map in feature_mappings:
+                        x = map(x)
+                    return x
+
+                return truncated_forward
+
+            def truncated_forward(self, hidden_layer):
+                return self.truncated_forwards[hidden_layer - self.start_layer]
+
+        return InternalModel(model, start_layer)
+    
     def __call__(self,x):
         # check if channel first
         if x.size(1) != self.input_shape[0]:
             x = x.permute([0,3,1,2])
-        return self.forward(x)
-
+        return [self._model._model.forward(x),]
+        
     def predict(self, x, batch_size=None):
         # check if channel first
         if x.size(1) != self.input_shape[0]:
             x = x.permute([0,3,1,2])
         if self.use_dknn:
-            pred, _, _ = self.dknn.predict(x)
-            return pred
+            return self.dknn.predict(x)
         else:
-            pred_sum = 0.
-            for i in range(len(self.hidden_layers)):
-                pred_sum = pred_sum + self.aise[i](x)
-            return pred_sum / len(self.hidden_layers)
-
+            with torch.no_grad():
+                x_start = torch.cat([
+                    self._model.to_start(x[i:i + self.batch_size].to(DEVICE)).cpu()
+                    for i in range(0, x.size(0), self.batch_size)
+                ], dim=0)
+            pred = np.zeros((x_start.size(0), self.n_class))
+            for aise in self.aise:
+                pred = pred + aise(x_start)
+            return pred
+        
     @property
     def get_layers(self):
+        """
+        Return the hidden layers in the model, if applicable.
+        :return: The hidden layers in the model, input and output layers excluded.
+        .. warning:: `get_layers` tries to infer the internal structure of the model.
+                     This feature comes with no guarantees on the correctness of the result.
+                     The intended order of the layers tries to match their order in the model, but this
+                     is not guaranteed either. In addition, the function can only infer the internal
+                     layers if the input model is of type `nn.Sequential`, otherwise, it will only
+                     return the logit layer.
+        """
+        import torch.nn as nn
 
         result = []
         if isinstance(self, nn.Sequential):
@@ -195,28 +242,43 @@ class CNNAISE(nn.Module):
         return result
 
 
-def make_mnist_model(**kwargs):
-    return CNNAISE(**kwargs)
+def make_rails_model(**kwargs):
+    return RAILS(**kwargs)
 
 
 def get_art_model(model_kwargs, wrapper_kwargs, weights_path=None):
+    
     assert weights_path is not None
     checkpoint = torch.load(weights_path, map_location=DEVICE)
-    model = make_mnist_model(train_data=checkpoint["train_data"],train_targets=checkpoint["train_targets"],
-                             state_dict=checkpoint["state_dict"],**model_kwargs)
-    model.to(DEVICE)
-
-    # disable gradients
-    for params in model.parameters():
+    cnn = VGG16()
+    cnn.load_state_dict(checkpoint["state_dict"])
+    cnn.to(DEVICE)
+    cnn.eval()
+    
+    saved_object_dir = os.path.join(paths.runtime_paths().saved_model_dir,"query_objects")
+    query_objects = checkpoint["query_objects"]
+    for v in query_objects.values():
+        v["saved_object_dir"] = saved_object_dir
+    
+    for params in cnn.parameters():
         params.requires_grad_(False)
+    
+    model = make_rails_model(
+        model=cnn, 
+        train_data=checkpoint["train_data"],
+        train_targets=checkpoint["train_targets"],
+        query_objects=query_objects,
+        **model_kwargs
+    )
 
     wrapped_model = RAILSEvalWrapper(
         model=model,
         loss=nn.CrossEntropyLoss(),
         optimizer=torch.optim.Adam(model.parameters(), lr=0.003),
-        input_shape=(28, 28, 1),
+        input_shape=(32, 32, 3),
         nb_classes=10,
         clip_values=(0.0, 1.0),
-        **wrapper_kwargs
+        **wrapper_kwargs,
     )
+    
     return wrapped_model

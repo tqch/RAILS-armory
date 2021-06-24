@@ -1,150 +1,121 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[ ]:
-
-from collections import Counter
-import math
-import numpy as np
-from tqdm import trange
-from sklearn.neighbors import NearestNeighbors
-
 import torch
+from sklearn.neighbors import NearestNeighbors
+import torch.nn as nn
+import numpy as np
+from tqdm import tqdm
 
 
-class Calibration():
-    def __init__(self, x_cali, y_cali):
-        self.x = x_cali
-        self.y = y_cali
-        self.n_sample = len(y_cali)
+class DKNN:
 
-    def __getitem__(self, index):
-        return self.x[index], self.y[index]
+    def __init__(
+        self,
+        model,
+        train_data,
+        train_targets,
+        n_class=10,
+        hidden_layers=-1,
+        n_neighbors=5,
+        metric="l2",
+        device=torch.device("cpu")
+    ):
 
-    def __len__(self):
-        return self.n_sample
+        self.hidden_layers = hidden_layers
+        self._model = self._wrap_model(model)
 
+        self.train_data = train_data
+        self.train_targets = np.array(train_targets)
 
-class DKNN():
-    def __init__(self, model, device, x_train, y_train,
-                 batch_size, n_neighbors, n_embs):
-        self.model = model
-        self.model.to(device)
-        self.model.eval()
+        self.hidden_layers = self._model.hidden_layers
+
         self.device = device
-        self.input_shape = x_train.shape[1:]
+        self._model.eval()  # make sure the model is in the eval mode
+        self._model.to(self.device)
 
-        self.batch_size = batch_size
+        self.n_class = n_class
+        self.metric = metric
         self.n_neighbors = n_neighbors
-        self.n_embs = n_embs
+        self._nns = self._build_nns()
 
-        self.rng = np.random.RandomState(1)
+    def _get_hidden_repr(self, x, batch_size=128, return_targets=False):
+        hidden_reprs = []
+        targets = None
+        if return_targets:
+            outs = []
 
-        x_train, y_train, self.calib_dataset = self._sep_data(x_train, y_train)
+        for i in range(0, x.size(0), batch_size):
+            x_batch = x[i:i + batch_size]
+            if return_targets:
+                hidden_reprs_batch, outs_batch = self._model(x_batch.to(self.device))
+            else:
+                hidden_reprs_batch, _ = self._model(x_batch.to(self.device))
+            if self.metric == "cosine":
+                hidden_reprs_batch = [
+                    hidden_repr_batch/hidden_repr_batch.pow(2).sum(dim=1,keepdim=True).sqrt()
+                    for hidden_repr_batch in hidden_reprs_batch
+                ]
+            hidden_reprs.append(hidden_reprs_batch)
+            if return_targets:
+                outs.append(outs_batch)
 
-        self.conv_features = self._build_rep_train(x_train)
-        self.train_targets = y_train
-        self.neighs = self._build_neighs()
-        self.alpha_calib_sum = self._build_calibration()
-
-    def _sep_data(self, xx, yy):
-        calieps = 720
-        cali_indice = np.array([i for i in range(0, xx.size(0), math.floor(xx.size(0) / calieps))])
-        cali_images = np.zeros((calieps,) + self.input_shape)
-        cali_labels = self.rng.randint(0, 10, calieps)
-        for i in range(calieps):
-            cali_images[i] = xx[cali_indice[i]]
-            cali_labels[i] = yy[i]
-        x_train = np.concatenate((xx, cali_images), axis=0)
-        y_train = np.concatenate((yy, cali_labels), axis=0)
-        x_train = np.delete(x_train, cali_indice, axis=0)
-        y_train = np.delete(y_train, cali_indice, axis=0)
-        calib_dataset = Calibration(cali_images.astype(np.float32), cali_labels)
-        return x_train, y_train, calib_dataset
-
-    def _build_rep_train(self, xx_batch_train, batchs=2000):
-        print('Building the feature spaces from the selected set.')
-        xhs = [[] for _ in range(self.n_embs)]
-        for i in trange(0, len(xx_batch_train), batchs):
-            xx = xx_batch_train[i:i + batchs]
-            *out_convs, _ = self.model(torch.Tensor(xx).to(self.device))
-            for j, out_conv in enumerate(out_convs):
-                out_conv = out_conv.contiguous().reshape(out_conv.size(0), -1).cpu().detach().numpy()
-                xhs[j].append(out_conv)
-        xhs = [np.concatenate(out_convs, axis=0) for out_convs in xhs]
-        print("Finished.")
-        return xhs
-
-    def _build_calibration(self):
-        print('Building calibration set.')
-        sequential_calib_loader = torch.utils.data.DataLoader(
-            self.calib_dataset,
-            shuffle    = False,
-            batch_size = self.batch_size
-        )
-        alpha_by_batch = [self._alpha(X, y) for X, y in sequential_calib_loader]
-        alpha_values   =  np.concatenate(alpha_by_batch)
-        c              = Counter(alpha_values)
-        alpha_sum_cum  = []
-
-        for alpha_value in range(self.n_embs * self.n_neighbors, -1, -1):
-            alpha_sum_cum.append(c[alpha_value] + (alpha_sum_cum[-1] if len(alpha_sum_cum) > 0 else 0))
-            
-        return np.array(alpha_sum_cum[::-1])
-    
-    def _build_neighs(self):
-        print('Building Nearest Neighbor finders.')
-        return [
-            NearestNeighbors(
-                n_neighbors = self.n_neighbors, 
-                metric      = 'cosine'
-            ).fit(feats) 
-            for feats in self.conv_features
+        hidden_reprs = [
+            np.concatenate([hidden_batch[i] for hidden_batch in hidden_reprs], axis=0)
+            for i in range(len(self.hidden_layers))
         ]
-        
-    def _alpha(self, X, y):
-        neighbors_by_layer     = self._get_closest_points(X)
-        closest_points_classes = self.train_targets[neighbors_by_layer]
-        same_class_neighbors   = torch.Tensor(closest_points_classes) != y.reshape(y.shape[0], 1, 1)
-        print((closest_points_classes.dtype,closest_points_classes.shape))
-        print(y.dtype,y.shape)
-        same_class_neighbors   = same_class_neighbors.reshape(-1, self.n_neighbors * self.n_embs)
-        alpha                  = same_class_neighbors.sum(axis = 1)
-        
-        return alpha
 
-    def _compute_nonconformity(self, X):
-        neighbors_by_layer  = self._get_closest_points(X)
-        closest_points_label   = self.train_targets[neighbors_by_layer]
-        closest_points_label   = closest_points_label.reshape(-1, self.n_embs*self.n_neighbors)
-        nonconformity          = [(closest_points_label != label).sum(axis = 1) for label in range(10)]
-        nonconformity          = np.stack(nonconformity, axis = 1)
-        
-        return nonconformity
-    
-    def _compute_p_value(self, X):
-        nonconformity = self._compute_nonconformity(X)
-        empirical_p_value      = self.alpha_calib_sum[nonconformity] / len(self.calib_dataset)
-        
-        return empirical_p_value
-    
-    def _get_closest_points(self, X):
-        *out_convs,_ = self.model(X.to(self.device))
-        neighbors_by_layer = []
-        for i, (neigh, layer_emb) in enumerate(zip(self.neighs, out_convs)):
-            emb       = layer_emb.detach().cpu().reshape(X.size(0), -1).numpy()
-            neighbors = neigh.kneighbors(emb, return_distance = False) 
-            neighbors_by_layer.append(neighbors)
-        return torch.tensor(np.stack(neighbors_by_layer, axis = 1))
+        if return_targets:
+            outs = np.concatenate(outs, axis=0)
+            targets = outs.argmax(axis=1)
 
-    def predict(self, X):
-        p_value     = self._compute_p_value(X)
-        y_pred      = p_value.argmax(axis = 1)
-        # Partitioning according to the second to last value in order to compute
-        # credibility and confidence
-        partition   = np.partition(p_value, -2)
-        credibility = partition[:, -1]
-        confidence  = 1 - partition[:, -2]
-        
-        return p_value, confidence, credibility
+        return hidden_reprs, targets
+
+    def _wrap_model(self, model):
+
+        class ModelWrapper(nn.Module):
+
+            def __init__(self, model, hidden_layers):
+                super(ModelWrapper, self).__init__()
+                self._model = model
+                self.hidden_mappings = [
+                    m[1] for m in model.named_children()
+                    if isinstance(m[1], nn.Sequential) and "classifier" not in m[0]
+                ]
+                if hidden_layers == -1:
+                    self.hidden_layers = list(range(len(self.hidden_mappings)))
+                else:
+                    self.hidden_layers = hidden_layers
+                self.classifier = self._model.classifier
+
+            def forward(self, x):
+                hidden_reprs = []
+                for mp in self.hidden_mappings:
+                    x = mp(x)
+                    hidden_reprs.append(x.detach().cpu())
+                out = self.classifier(x.flatten(start_dim=1) if x.ndim!=2 else x)
+                return [hidden_reprs[i].flatten(start_dim=1) for i in self.hidden_layers], out
+
+        return ModelWrapper(model, self.hidden_layers)
+
+    def _build_nns(self):
+        hidden_reprs, _ = self._get_hidden_repr(self.train_data)
+        return [
+            NearestNeighbors(n_neighbors=self.n_neighbors, n_jobs=-1).fit(hidden_repr)
+            for hidden_repr in tqdm(hidden_reprs)
+        ]
+
+    def predict(self, x):
+        hidden_reprs, _ = self._get_hidden_repr(x)
+        nn_indices = [
+            nn.kneighbors(hidden_repr, return_distance=False)
+            for nn, hidden_repr in zip(self._nns, hidden_reprs)
+        ]
+        nn_indices = np.concatenate(nn_indices, axis=1)
+        nn_labels = self.train_targets[nn_indices]
+        nn_labels_count = np.stack(list(map(
+            lambda x: np.bincount(x, minlength=10),
+            nn_labels
+        )))
+        return nn_labels_count/len(self.hidden_layers)/self.n_neighbors
+
+    def __call__(self, x):
+        return self.predict(x)
 

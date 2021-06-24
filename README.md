@@ -1,25 +1,14 @@
 # External Repo of Armory Testbed for RAILS Evaluation
 (no system-level docker installation needed)
 
-## Attacks tested
+## Attacks for testing
 ### White-box
 - FGSM
 - PGD
 ### Black-box
-- ZOO
-- Patch
-- Shadow
 - Square
-- Threshold
-- HopSkipJump
-- Wasserstein (non $l_p$)
 
 ## Usage
-
-Smoke test for CNN+AISE defense:
-```buildoutcfg
-python -m test_cnnaise
-```
 
 Evaluate white-box attack (FGSM) on RAILS via Armory:
 ```buildoutcfg
