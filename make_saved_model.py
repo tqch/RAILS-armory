@@ -2,6 +2,7 @@ from torchvision import datasets,transforms
 import torch
 from armory import paths
 import os
+import shutil
 
 root = "./datasets"
 download = True  # set to True for the first run
@@ -34,5 +35,7 @@ checkpoint = {
 }
 
 saved_model_dir = paths.runtime_paths().saved_model_dir
+
+shutil.copytree("./query_objects", os.path.join(saved_model_dir,"query_objects"))
 
 torch.save(checkpoint, os.path.join(saved_model_dir,"cifar_vgg16.pt"))
