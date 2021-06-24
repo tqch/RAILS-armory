@@ -2,21 +2,28 @@
 (no system-level docker installation needed)
 
 ## Attacks for testing
+
 ### White-box
 - FGSM
 - PGD
+
 ### Black-box
 - Square
 
 ## Usage
 
-Evaluate white-box attack (FGSM) on RAILS via Armory:
+Make integrated model ready for the armory-testbed:
 ```buildoutcfg
-armory run example_scenario_configs/test_rails_fgsm.json --check --no-docker --use-gpu
+python make_saved_model.py
+```
+
+Evaluate white-box attack (PGD) on RAILS via Armory:
+```buildoutcfg
+armory run example_scenario_configs/MICH_cifar_rails_pgd.json --check --no-docker --use-gpu
 ```
 note that the `--use-gpu` is optional (remove it if no gpu is installed on your machine)
 
-Evaluate black-box attack (HopSkipJump) on RAILS via Armory:
+Evaluate black-box attack (Square) on RAILS via Armory:
 ```buildoutcfg
-armory run example_scenario_configs/test_rails_hopskipjump.json --check --no-docker --use-gpu --skip-benign
+armory run example_scenario_configs/MICH_cifar_rails_square.json --check --no-docker --use-gpu --skip-benign
 ```
