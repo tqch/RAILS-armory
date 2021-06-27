@@ -34,6 +34,7 @@ checkpoint = {
     "query_objects": query_objects
 }
 
+paths.set_mode("host")  # important: set mode to host
 saved_model_dir = paths.runtime_paths().saved_model_dir
 
 shutil.copytree("./query_objects", os.path.join(saved_model_dir,"query_objects"))
