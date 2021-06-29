@@ -20,7 +20,10 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class RAILSEvalWrapper(PyTorchClassifier):
     def __init__(self,**kwargs):
         super(RAILSEvalWrapper,self).__init__(**kwargs)
-
+        self.train_data = None
+        self.train_targets = None
+        self.query_objects = None
+        
     def _make_model_wrapper(self, model):
         return model
 
@@ -280,5 +283,9 @@ def get_art_model(model_kwargs, wrapper_kwargs, weights_path=None):
         clip_values=(0.0, 1.0),
         **wrapper_kwargs,
     )
+    
+    wrapped_model.train_data = checkpoint["train_data"]
+    wrapped_model.train_targets = checkpoint["train_targets"]
+    wrapped_model.query_objects = query_objects
     
     return wrapped_model
