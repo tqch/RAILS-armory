@@ -42,14 +42,14 @@
                 {
                     "hidden_layer": 2,
                     "sampling_temperature": 1,
-                    "max_generation": 10,
+                    "max_generation": 5,
                     "mut_range": [0.005, 0.015],
                     "mut_prob": [0.05,0.15]
                 },
                 {
                     "hidden_layer": 3,
                     "sampling_temperature": 10,
-                    "max_generation": 5,
+                    "max_generation": 1,
                     "mut_range": [0.005, 0.015]
                 }
             ],
