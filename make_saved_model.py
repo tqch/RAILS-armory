@@ -23,7 +23,7 @@ for layer,f in [(2,256*4*4),(3,512*2*2)]:
         "metric": "euclidean"
     }
 
-state_dict = torch.load("model_weights/cifar_vgg16.pt")
+state_dict = torch.load("model_weights/MICH_saved_weights.pt")
 train_data = torch.FloatTensor(trainset.data/255).permute(0,3,1,2)
 train_targets = torch.LongTensor(trainset.targets)
 
